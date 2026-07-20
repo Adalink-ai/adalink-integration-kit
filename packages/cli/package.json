@@ -1,0 +1,39 @@
+{
+  "name": "@adaflow/cli",
+  "version": "0.0.0",
+  "description": "CLI oficial da plataforma Adaflow — instala e atualiza skills de agente (Claude Code) nos projetos integrados",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "adaflow": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --sourcemap --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "tiged": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.1.0"
+  }
+}

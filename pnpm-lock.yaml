@@ -12,6 +12,25 @@ importers:
         specifier: ^2.31.1
         version: 2.31.1(@types/node@22.20.1)
 
+  packages/cli:
+    dependencies:
+      tiged:
+        specifier: ^2.12.7
+        version: 2.12.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.0
+        version: 22.20.1
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(postcss@8.5.20)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.1.0
+        version: 3.2.7(@types/node@22.20.1)
+
   packages/create-adaflow-app:
     dependencies:
       tiged:

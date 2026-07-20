@@ -13,6 +13,7 @@ breve, template NextJS.
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
 | [`packages/sdk`](./packages/sdk) | [`@adaflow/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
 | [`packages/create-adaflow-app`](./packages/create-adaflow-app) | [`create-adaflow-app`](./packages/create-adaflow-app/README.md) — CLI que cria um app integrado a partir dos templates |
+| [`packages/cli`](./packages/cli) | [`@adaflow/cli`](./packages/cli/README.md) — binário `adaflow`; instala e atualiza as skills nos projetos (`adaflow skills add\|update\|list`) |
 | `templates/` | Templates de app integrado, consumidos via [`tiged`](#templates) (NextJS em breve) |
 
 ## Skills
@@ -32,14 +33,20 @@ integração no seu app, com passos, snippets e checklist de validação:
 
 ```bash
 # na raiz do repositório do seu app
-curl -fsSL https://raw.githubusercontent.com/Adalink-ai/adalink-integration-kit/main/scripts/install-skills.sh | bash
-# ou, com o kit clonado:
-./scripts/install-skills.sh /caminho/do/seu/app
+npx @adaflow/cli skills add
+
+# atualizar depois (o conteúdo vem sempre da main deste repositório):
+npx @adaflow/cli skills update
 ```
 
-O script copia as skills para `.claude/skills/` do projeto de destino. Depois
-disso, basta pedir ao Claude Code — ex.: "implemente o login via Adaflow" — e
-a skill correspondente é usada automaticamente.
+A CLI copia as skills para `.claude/skills/` do projeto (ou `~/.claude/skills`
+com `--global`) e mantém um manifest para atualizá-las sem sobrescrever
+customizações locais — detalhes no [README da CLI](./packages/cli/README.md).
+Depois disso, basta pedir ao Claude Code — ex.: "implemente o login via
+Adaflow" — e a skill correspondente é usada automaticamente.
+
+> O script `scripts/install-skills.sh` (curl | bash) continua funcionando,
+> mas está **deprecated** em favor da CLI.
 
 ## Templates
 
@@ -80,6 +87,7 @@ cd meu-app && git init && pnpm install
 - [x] `packages/create-adaflow-app` — CLI de scaffold a partir dos templates
 - [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
 - [x] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm (0.1.0, 2026-07-20)
+- [x] `packages/cli` — `@adaflow/cli` (binário `adaflow`) com `skills add|update|list`
 
 ## Desenvolvimento
 

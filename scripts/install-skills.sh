@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
+# DEPRECATED: prefira a CLI oficial — npx @adaflow/cli skills add
+# (gerencia manifest, atualiza com "skills update" e preserva customizações).
+#
 # Instala as skills do Adalink Integration Kit no repositório de destino.
 # Uso:
 #   ./scripts/install-skills.sh [caminho-do-projeto]   # com o kit clonado
 #   curl -fsSL https://raw.githubusercontent.com/Adalink-ai/adalink-integration-kit/main/scripts/install-skills.sh | bash
 set -euo pipefail
+
+echo "AVISO: este script está deprecated — prefira: npx @adaflow/cli skills add"
+echo ""
 
 TARGET="${1:-$(pwd)}"
 DEST="$TARGET/.claude/skills"

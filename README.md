@@ -1,7 +1,8 @@
 # Adalink Integration Kit
 
-Kit oficial para integrar apps parceiros e de clientes à plataforma Adalink /
-Adaflow: documentação, skills de agente (Claude Code), SDK TypeScript e, em
+Kit oficial para integrar apps parceiros e de clientes ao Adaflow, a
+plataforma de IA da Adalink: documentação, skills de agente (Claude Code),
+SDK TypeScript (`@adaflow/sdk`), CLI de scaffold (`create-adaflow-app`) e, em
 breve, template NextJS.
 
 ## O que tem aqui
@@ -10,7 +11,7 @@ breve, template NextJS.
 |---|---|
 | [`docs/`](./docs) | [Guia de uso para apps integrados](./docs/INTEGRATED-APPS-GUIDE.md) (SSO, agentes, chat OpenAI-compatible, repositórios de conhecimento) e o [contrato da API OpenAI-compatible](./docs/OPENAI-COMPAT.md) |
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
-| [`packages/sdk`](./packages/sdk) | [`@adalink/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
+| [`packages/sdk`](./packages/sdk) | [`@adaflow/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
 | [`packages/create-adaflow-app`](./packages/create-adaflow-app) | [`create-adaflow-app`](./packages/create-adaflow-app/README.md) — CLI que cria um app integrado a partir dos templates |
 | `templates/` | Templates de app integrado, consumidos via [`tiged`](#templates) (NextJS em breve) |
 
@@ -45,7 +46,7 @@ a skill correspondente é usada automaticamente.
 Os templates vivem em `templates/` dentro deste monorepo. O jeito recomendado
 de consumir é a CLI [`create-adaflow-app`](./packages/create-adaflow-app/README.md),
 que baixa o template, aplica o nome do projeto, ajusta a dependência do
-`@adalink/sdk` e roda `git init`:
+`@adaflow/sdk` e roda `git init`:
 
 ```bash
 pnpm create adaflow-app meu-app
@@ -78,7 +79,7 @@ cd meu-app && git init && pnpm install
 - [x] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
 - [x] `packages/create-adaflow-app` — CLI de scaffold a partir dos templates
 - [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
-- [ ] Publicar `@adalink/sdk` e `create-adaflow-app` no registry npm
+- [ ] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm
 
 ## Desenvolvimento
 

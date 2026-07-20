@@ -1,13 +1,16 @@
 {
-  "name": "@adalink/sdk",
+  "name": "@adaflow/sdk",
   "version": "0.1.0",
-  "description": "SDK Node/TypeScript oficial para integração com a plataforma Adalink/Adaflow",
+  "description": "SDK Node/TypeScript oficial para integração com a plataforma Adaflow",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git",
     "directory": "packages/sdk"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {

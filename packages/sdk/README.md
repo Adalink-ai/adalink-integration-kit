@@ -1,6 +1,6 @@
-# @adalink/sdk
+# @adaflow/sdk
 
-SDK Node/TypeScript oficial para integração com a plataforma Adalink/Adaflow.
+SDK Node/TypeScript oficial para integração com a plataforma Adaflow.
 Client tipado sobre o API Gateway: chat OpenAI-compatible (genérico e
 especialista), agentes autônomos, repositórios de conhecimento, SSO handoff e
 billing. Zero dependências de runtime — usa `fetch` nativo (Node ≥ 18.17 ou
@@ -12,7 +12,7 @@ browser).
 ## Instalação
 
 ```bash
-pnpm add @adalink/sdk
+pnpm add @adaflow/sdk
 ```
 
 ## Credenciais
@@ -22,16 +22,16 @@ Regra da plataforma: **JWT do usuário logado sempre que há usuário no fluxo**
 server-to-server.
 
 ```ts
-import { AdalinkClient } from '@adalink/sdk';
+import { AdaflowClient } from '@adaflow/sdk';
 
 // Usuário logado (preferido) — JWT obtido via SSO handoff.
 // Aceita função (sincrona/assíncrona) para renovação a cada request.
-const client = new AdalinkClient({
-  jwt: () => sessionStorage.getItem('adalink:jwt')!,
+const client = new AdaflowClient({
+  jwt: () => sessionStorage.getItem('adaflow:jwt')!,
 });
 
 // Server-to-server — app token, NUNCA exposto no browser.
-const s2s = new AdalinkClient({ appToken: process.env.ADALINK_APP_TOKEN! });
+const s2s = new AdaflowClient({ appToken: process.env.ADAFLOW_APP_TOKEN! });
 ```
 
 `baseUrl` tem default de produção (`https://adalink-api-gateway.onrender.com`);
@@ -43,17 +43,17 @@ O Adaflow é o Identity Provider. O app redireciona para o handoff e recebe o
 JWT no fragment `#sso_token=` (não vai ao servidor nem vaza por Referer):
 
 ```ts
-import { buildHandoffUrl, consumeSsoToken } from '@adalink/sdk';
+import { buildHandoffUrl, consumeSsoToken } from '@adaflow/sdk';
 
 // 1. Redireciona para o Adaflow
 location.href = buildHandoffUrl('https://app.adalink.ai', 'https://meuapp.com/sso/callback');
 
 // 2. Na página de callback: extrai o token e limpa a URL
 const jwt = consumeSsoToken();
-if (jwt) sessionStorage.setItem('adalink:jwt', jwt);
+if (jwt) sessionStorage.setItem('adaflow:jwt', jwt);
 ```
 
-Quando o JWT expira, `AdalinkApiError.isAuthError` fica `true` — refaça o
+Quando o JWT expira, `AdaflowApiError.isAuthError` fica `true` — refaça o
 handoff (com sessão ativa no Adaflow o redirect volta imediatamente).
 
 ## Chat (genérico e especialista)
@@ -126,16 +126,16 @@ O processamento (OCR/embedding) é assíncrono após o `confirm`; acompanhe via
 
 ## Tratamento de erros
 
-Toda resposta não-2xx vira `AdalinkApiError`, normalizando os dois envelopes
+Toda resposta não-2xx vira `AdaflowApiError`, normalizando os dois envelopes
 de erro da plataforma (OpenAI e gateway):
 
 ```ts
-import { AdalinkApiError } from '@adalink/sdk';
+import { AdaflowApiError } from '@adaflow/sdk';
 
 try {
   await client.chat.create(params);
 } catch (err) {
-  if (err instanceof AdalinkApiError) {
+  if (err instanceof AdaflowApiError) {
     if (err.isAuthError) refazerHandoff();          // 401 — JWT expirado
     else if (err.isInsufficientQuota) avisarSaldo(); // condição do tenant, não é bug
     else if (err.isRateLimit) retryComBackoff();     // 429

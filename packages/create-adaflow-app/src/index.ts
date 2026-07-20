@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * create-adaflow-app — cria um app integrado à plataforma Adalink/Adaflow a
+ * create-adaflow-app — cria um app integrado à plataforma Adaflow a
  * partir de um template do integration kit.
  *
  * Fluxo: baixa `templates/<nome>` do monorepo via tiged (sem histórico git),
  * aplica o nome do projeto no package.json, troca a dependência `workspace:*`
- * do @adalink/sdk pela versão publicada e inicializa um repositório git.
+ * do @adaflow/sdk pela versão publicada e inicializa um repositório git.
  */
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -44,7 +44,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function printHelp(): void {
-  console.log(`create-adaflow-app — cria um app integrado à plataforma Adalink/Adaflow
+  console.log(`create-adaflow-app — cria um app integrado à plataforma Adaflow
 
 Uso:
   pnpm create adaflow-app <diretório> [--template ${TEMPLATES.join('|')}]

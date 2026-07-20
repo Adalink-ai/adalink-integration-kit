@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=22"

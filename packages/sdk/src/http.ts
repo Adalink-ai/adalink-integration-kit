@@ -3,7 +3,7 @@ import { errorFromResponse } from './errors.js';
 /** Fornecedor de token: valor fixo ou função (sincrona/assíncrona) para renovação. */
 export type TokenProvider = string | (() => string | Promise<string>);
 
-export interface AdalinkClientOptions {
+export interface AdaflowClientOptions {
   /**
    * JWT do usuário logado (obtido via SSO handoff). PREFERIDO sempre que há
    * usuário no fluxo — a ação fica auditada no usuário real. Aceita função
@@ -11,7 +11,7 @@ export interface AdalinkClientOptions {
    */
   jwt?: TokenProvider;
   /**
-   * App token da Adalink (server-to-server). Enviado como `x-ada-token`.
+   * App token do Adaflow (server-to-server). Enviado como `x-ada-token`.
    * Ignorado quando `jwt` também é informado — a plataforma prioriza o
    * x-ada-token quando ambos os headers chegam, então o SDK envia só um.
    */
@@ -39,10 +39,10 @@ export interface RequestOptions {
 
 /** Transporte HTTP interno do SDK — resolve credencial, monta URL e trata erros. */
 export class HttpTransport {
-  private readonly options: AdalinkClientOptions;
+  private readonly options: AdaflowClientOptions;
   readonly baseUrl: string;
 
-  constructor(options: AdalinkClientOptions) {
+  constructor(options: AdaflowClientOptions) {
     if (!options.jwt && !options.appToken) {
       throw new Error(
         'Informe uma credencial: jwt (usuário logado, preferido) ou appToken (server-to-server).',

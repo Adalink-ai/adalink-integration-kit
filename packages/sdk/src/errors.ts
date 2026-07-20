@@ -1,9 +1,9 @@
 /**
- * Erro de API da Adalink. Normaliza os dois envelopes de erro da plataforma:
+ * Erro de API do Adaflow. Normaliza os dois envelopes de erro da plataforma:
  * o envelope OpenAI (`{ error: { message, type, code } }`, usado em /v1/openai)
  * e o envelope padrão do gateway (`{ message, error, statusCode }`).
  */
-export class AdalinkApiError extends Error {
+export class AdaflowApiError extends Error {
   /** Status HTTP da resposta. */
   readonly status: number;
   /** Código estável quando disponível (ex.: `invalid_api_key`, `model_not_found`, `insufficient_quota`). */
@@ -13,7 +13,7 @@ export class AdalinkApiError extends Error {
 
   constructor(message: string, status: number, code?: string, body?: unknown) {
     super(message);
-    this.name = 'AdalinkApiError';
+    this.name = 'AdaflowApiError';
     this.status = status;
     this.code = code;
     this.body = body;
@@ -45,8 +45,8 @@ interface GatewayEnvelope {
   code?: string;
 }
 
-/** Constrói um AdalinkApiError a partir de uma Response não-2xx. */
-export async function errorFromResponse(res: Response): Promise<AdalinkApiError> {
+/** Constrói um AdaflowApiError a partir de uma Response não-2xx. */
+export async function errorFromResponse(res: Response): Promise<AdaflowApiError> {
   let body: unknown;
   let message = `HTTP ${res.status}`;
   let code: string | undefined;
@@ -64,5 +64,5 @@ export async function errorFromResponse(res: Response): Promise<AdalinkApiError>
   } catch {
     // corpo não-JSON (ex.: HTML de proxy) — mantém o fallback HTTP <status>
   }
-  return new AdalinkApiError(message, res.status, code, body);
+  return new AdaflowApiError(message, res.status, code, body);
 }

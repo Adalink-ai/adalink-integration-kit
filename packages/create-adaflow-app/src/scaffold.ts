@@ -10,7 +10,7 @@ export type TemplateName = (typeof TEMPLATES)[number];
 export const DEFAULT_TEMPLATE: TemplateName = 'nextjs';
 
 /**
- * Versão publicada do @adalink/sdk gravada no app gerado. Dentro do monorepo o
+ * Versão publicada do @adaflow/sdk gravada no app gerado. Dentro do monorepo o
  * template usa `workspace:*`, que não resolve fora dele — o scaffold reescreve.
  */
 export const SDK_PUBLISHED_VERSION = '^0.1.0';
@@ -39,7 +39,7 @@ export function validateProjectName(name: string): string | null {
 
 /**
  * Reescreve o package.json do app gerado: aplica o nome do projeto e troca a
- * dependência `workspace:*` do @adalink/sdk pela versão publicada.
+ * dependência `workspace:*` do @adaflow/sdk pela versão publicada.
  */
 export function rewritePackageJson(raw: string, projectName: string): string {
   const pkg = JSON.parse(raw) as Record<string, unknown>;
@@ -47,9 +47,9 @@ export function rewritePackageJson(raw: string, projectName: string): string {
 
   for (const field of ['dependencies', 'devDependencies'] as const) {
     const deps = pkg[field] as Record<string, string> | undefined;
-    const sdkVersion = deps?.['@adalink/sdk'];
+    const sdkVersion = deps?.['@adaflow/sdk'];
     if (deps && sdkVersion?.startsWith('workspace:')) {
-      deps['@adalink/sdk'] = SDK_PUBLISHED_VERSION;
+      deps['@adaflow/sdk'] = SDK_PUBLISHED_VERSION;
     }
   }
 

@@ -1,13 +1,16 @@
 {
   "name": "create-adaflow-app",
   "version": "0.1.0",
-  "description": "CLI oficial para criar apps integrados à plataforma Adalink/Adaflow a partir dos templates do integration kit",
+  "description": "CLI oficial para criar apps integrados à plataforma Adaflow a partir dos templates do integration kit",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git",
     "directory": "packages/create-adaflow-app"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "create-adaflow-app": "./dist/index.js"

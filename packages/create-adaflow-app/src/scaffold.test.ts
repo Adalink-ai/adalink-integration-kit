@@ -59,30 +59,30 @@ describe('rewritePackageJson', () => {
   it('aplica o nome e troca workspace:* do sdk pela versão publicada', () => {
     const raw = JSON.stringify({
       name: 'adaflow-template-nextjs',
-      dependencies: { '@adalink/sdk': 'workspace:*', next: '^16.0.0' },
+      dependencies: { '@adaflow/sdk': 'workspace:*', next: '^16.0.0' },
     });
     const out = JSON.parse(rewritePackageJson(raw, 'meu-app'));
     expect(out.name).toBe('meu-app');
-    expect(out.dependencies['@adalink/sdk']).toBe(SDK_PUBLISHED_VERSION);
+    expect(out.dependencies['@adaflow/sdk']).toBe(SDK_PUBLISHED_VERSION);
     expect(out.dependencies.next).toBe('^16.0.0');
   });
 
   it('troca também em devDependencies', () => {
     const raw = JSON.stringify({
       name: 't',
-      devDependencies: { '@adalink/sdk': 'workspace:^' },
+      devDependencies: { '@adaflow/sdk': 'workspace:^' },
     });
     const out = JSON.parse(rewritePackageJson(raw, 'meu-app'));
-    expect(out.devDependencies['@adalink/sdk']).toBe(SDK_PUBLISHED_VERSION);
+    expect(out.devDependencies['@adaflow/sdk']).toBe(SDK_PUBLISHED_VERSION);
   });
 
   it('não mexe em versão que já não é workspace', () => {
     const raw = JSON.stringify({
       name: 't',
-      dependencies: { '@adalink/sdk': '^0.2.0' },
+      dependencies: { '@adaflow/sdk': '^0.2.0' },
     });
     const out = JSON.parse(rewritePackageJson(raw, 'meu-app'));
-    expect(out.dependencies['@adalink/sdk']).toBe('^0.2.0');
+    expect(out.dependencies['@adaflow/sdk']).toBe('^0.2.0');
   });
 
   it('funciona sem o sdk nas dependências', () => {

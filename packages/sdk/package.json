@@ -1,0 +1,40 @@
+{
+  "name": "@adalink/sdk",
+  "version": "0.1.0",
+  "description": "SDK Node/TypeScript oficial para integração com a plataforma Adalink/Adaflow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git",
+    "directory": "packages/sdk"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.1.0"
+  }
+}

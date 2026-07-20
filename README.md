@@ -1,8 +1,8 @@
 # Adalink Integration Kit
 
 Kit oficial para integrar apps parceiros e de clientes à plataforma Adalink /
-Adaflow: documentação, skills de agente (Claude Code) e, em breve, SDK e
-template NextJS.
+Adaflow: documentação, skills de agente (Claude Code), SDK TypeScript e, em
+breve, template NextJS.
 
 ## O que tem aqui
 
@@ -10,7 +10,7 @@ template NextJS.
 |---|---|
 | [`docs/`](./docs) | [Guia de uso para apps integrados](./docs/INTEGRATED-APPS-GUIDE.md) (SSO, agentes, chat OpenAI-compatible, repositórios de conhecimento) e o [contrato da API OpenAI-compatible](./docs/OPENAI-COMPAT.md) |
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
-| `packages/` | Reservado — SDK TypeScript (`@adalink/sdk`) em breve |
+| [`packages/sdk`](./packages/sdk) | [`@adalink/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
 | `templates/` | Reservado — template NextJS de app integrado em breve |
 
 ## Skills
@@ -50,7 +50,7 @@ a skill correspondente é usada automaticamente.
 
 ## Roadmap
 
-- [ ] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
+- [x] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
 - [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
 
 ## Desenvolvimento

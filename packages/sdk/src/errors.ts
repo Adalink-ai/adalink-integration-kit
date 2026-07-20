@@ -33,6 +33,11 @@ export class AdaflowApiError extends Error {
   get isRateLimit(): boolean {
     return this.status === 429 && this.code !== 'insufficient_quota';
   }
+
+  /** Sem permissão RBAC (ex.: leitura de Governança exige platform.audit.read). */
+  get isPermissionError(): boolean {
+    return this.status === 403;
+  }
 }
 
 interface OpenAiEnvelope {

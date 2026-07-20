@@ -28,6 +28,7 @@ integração no seu app, com passos, snippets e checklist de validação:
 | [`adaflow-autonomous-agent`](./skills/adaflow-autonomous-agent/SKILL.md) | Execução de agentes autônomos por id (síncrono + SSE) |
 | [`adaflow-generic-chat`](./skills/adaflow-generic-chat/SKILL.md) | Chamada genérica de LLM via API OpenAI-compatible |
 | [`adaflow-knowledge-repository`](./skills/adaflow-knowledge-repository/SKILL.md) | Criar repositórios de conhecimento e subir documentos (RAG) |
+| [`adaflow-governance`](./skills/adaflow-governance/SKILL.md) | Trilha de auditoria: eventos de negócio + sessão no módulo Governança |
 
 ### Instalação das skills no seu projeto
 

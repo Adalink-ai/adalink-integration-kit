@@ -35,6 +35,8 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Aceita text/event-stream e retorna a Response sem consumir o body. */
   stream?: boolean;
+  /** Request sobrevive ao unload da página (flush final do tracker no browser). */
+  keepalive?: boolean;
 }
 
 /** Transporte HTTP interno do SDK — resolve credencial, monta URL e trata erros. */
@@ -81,6 +83,7 @@ export class HttpTransport {
       method: opts.method ?? 'GET',
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      ...(opts.keepalive ? { keepalive: true } : {}),
     });
 
     if (!res.ok) {

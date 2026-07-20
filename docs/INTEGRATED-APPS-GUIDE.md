@@ -496,7 +496,77 @@ revelada).
 
 ---
 
-## 5. Referências
+## 5. Governança e trilha de auditoria
+
+O Adaflow registra os passos dos usuários logados e exibe tudo no módulo
+**Governança**. Com esta superfície, o seu app entra na mesma trilha: cada
+passo de negócio ("contrato aprovado", "proposta enviada") aparece junto da
+atividade nativa, identificado como `App: <nome do seu app>`, e conta na
+atividade diária do usuário.
+
+### Registrar eventos (qualquer usuário autenticado)
+
+`POST /v1/audit/events` (single) e `POST /v1/audit/events/batch` (até 50,
+aceite parcial). Respostas `202`. Idempotente por `eventId` — reenvios contam
+como `deduplicated`/`duplicated`, nunca duplicam a trilha.
+
+```bash
+curl -X POST "$GATEWAY/v1/audit/events" \
+  -H "Authorization: Bearer $JWT" -H 'content-type: application/json' \
+  -d '{
+    "app": "meu-app-vendas",
+    "eventId": "7f6e5d4c-...",
+    "action": "app.contrato.aprovado",
+    "actionLabel": "Contrato aprovado",
+    "resource": "Contrato",
+    "severity": "info",
+    "metadata": { "numeroContrato": "2026-0042" }
+  }'
+```
+
+Regras do contrato:
+
+- `action` DEVE usar o namespace reservado `app.<dominio>.<verbo>` (lowercase).
+- `app` é o slug estável do seu app (lowercase, hífens) — vira o
+  `sourceService: app:<slug>` na trilha. Com app token, deve bater com o
+  `app_id` do token (403 em divergência).
+- `organizationId`/usuário NUNCA vão no body — vêm da credencial validada
+  pelo gateway. `metadata` tem cap de 4KB e não pode conter PII/segredos.
+- `occurredAt` aceita até 7 dias no passado (backfill curto) e 5 min no futuro.
+- Rate limit: 300 req/min por organização (flag `limit.rateLimit.auditIngest`).
+
+### Via SDK (recomendado)
+
+```ts
+// Browser: tracker buffered (flush por lote/intervalo, retry, keepalive)
+const tracker = client.governance.tracker({ app: 'meu-app-vendas' });
+tracker.track({ action: 'app.contrato.aprovado', resource: 'Contrato', actionLabel: 'Contrato aprovado' });
+
+// Server-side / evento crítico: envio imediato awaitável
+await client.governance.track({ action: 'app.contrato.aprovado', resource: 'Contrato' }, { app: 'meu-app-vendas' });
+```
+
+No browser, roteie pelo proxy do seu app (`/api/adaflow/[...path]` com
+allowlist — ver template NextJS): sem CORS e o gateway não é exposto.
+
+### Sessão e page-views
+
+`startSessionTracking(client)` liga o tracking automático: heartbeat 60s só
+com a aba visível, session-end no fechamento (`fetch keepalive` — sendBeacon
+não carrega o header Authorization), `handle.pageView(path)` no route-change.
+Alimenta o tempo ativo e a contagem de sessões do usuário na Governança.
+
+### Ler a trilha (admin)
+
+`GET /v1/audit/logs` (cursor, filtros; `sourceService=app:<slug>` filtra o seu
+app), `/v1/audit/stats`, `/v1/audit/users/:userId/timeline`,
+`/v1/audit/governance/overview`, `/v1/audit/logs/export` (CSV). Exigem usuário
+com permissão `platform.audit.read` — 403 = sem acesso (mostre aviso amigável,
+não erro). O retorno de listagens traz `partial`/`failedSources` quando alguma
+fonte do fan-out falhou — sinalize na UI. No SDK: `client.governance.listLogs()`
+e afins.
+
+## 6. Referências
 
 | Recurso | Onde |
 |---|---|

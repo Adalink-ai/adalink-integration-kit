@@ -13,7 +13,7 @@ echo ""
 
 TARGET="${1:-$(pwd)}"
 DEST="$TARGET/.claude/skills"
-SKILLS=(adaflow-sso adaflow-assistants adaflow-autonomous-agent adaflow-generic-chat adaflow-knowledge-repository)
+SKILLS=(adaflow-sso adaflow-assistants adaflow-autonomous-agent adaflow-generic-chat adaflow-knowledge-repository adaflow-governance)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" 2>/dev/null && pwd || true)"
 LOCAL_SKILLS_DIR="$SCRIPT_DIR/../skills"

@@ -13,6 +13,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { clearJwt, getJwt, markAuthOk, retryLoginOnce } from '@/lib/auth';
+import { track } from '@/lib/tracking';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -82,6 +83,12 @@ export default function ChatPage() {
 
       markAuthOk();
       chatIdRef.current = res.headers.get('x-chat-id') ?? chatIdRef.current;
+      // Passo de negócio na trilha de auditoria (módulo Governança do Adaflow)
+      track({
+        action: 'app.chat.mensagem-enviada',
+        resource: 'Chat',
+        metadata: { chatId: chatIdRef.current },
+      });
 
       const reader = res.body?.getReader();
       if (!reader) return;

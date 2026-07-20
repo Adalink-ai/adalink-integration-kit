@@ -124,6 +124,39 @@ await client.specialists.linkRepository(specialistId, repo.id);
 O processamento (OCR/embedding) é assíncrono após o `confirm`; acompanhe via
 `client.repositories.listFiles(repo.id)`.
 
+## Governança / Trilha de Auditoria
+
+Registre os passos do usuário logado — eles aparecem no módulo Governança do
+Adaflow identificados como `App: <nome>`:
+
+```ts
+// Browser: tracker buffered (fail-soft, flush automático + keepalive no unload)
+const tracker = client.governance.tracker({ app: 'meu-app' });
+tracker.track({
+  action: 'app.contrato.aprovado',   // namespace obrigatório: app.<dominio>.<verbo>
+  resource: 'Contrato',
+  actionLabel: 'Contrato aprovado',  // label pt-BR exibido na Governança
+});
+
+// Server-side / evento crítico: imediato e awaitável (idempotente por eventId)
+await client.governance.track(
+  { action: 'app.proposta.enviada', resource: 'Proposta', eventId: proposta.id },
+  { app: 'meu-app' },
+);
+
+// Sessão automática (browser): heartbeat 60s + session-end no fechamento
+import { startSessionTracking } from '@adaflow/sdk';
+const handle = startSessionTracking(client);
+handle.pageView('/contratos');   // no route-change do SPA
+await handle.stop();             // no logout/cleanup
+
+// Leitura (exige permissão platform.audit.read — 403 → err.isPermissionError)
+const page = await client.governance.listLogs({ sourceService: 'app:meu-app' });
+```
+
+Nunca coloque PII/segredos em `metadata` (cap 4KB). No browser, aponte o
+`baseUrl` para um proxy do seu app (ver template NextJS) — sem CORS.
+
 ## Tratamento de erros
 
 Toda resposta não-2xx vira `AdaflowApiError`, normalizando os dois envelopes

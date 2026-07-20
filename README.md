@@ -11,7 +11,7 @@ breve, template NextJS.
 | [`docs/`](./docs) | [Guia de uso para apps integrados](./docs/INTEGRATED-APPS-GUIDE.md) (SSO, agentes, chat OpenAI-compatible, repositórios de conhecimento) e o [contrato da API OpenAI-compatible](./docs/OPENAI-COMPAT.md) |
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
 | [`packages/sdk`](./packages/sdk) | [`@adalink/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
-| `templates/` | Reservado — template NextJS de app integrado em breve |
+| `templates/` | Templates de app integrado, consumidos via [`tiged`](#templates) (NextJS em breve) |
 
 ## Skills
 
@@ -38,6 +38,21 @@ curl -fsSL https://raw.githubusercontent.com/Adalink-ai/adalink-integration-kit/
 O script copia as skills para `.claude/skills/` do projeto de destino. Depois
 disso, basta pedir ao Claude Code — ex.: "implemente o login via Adaflow" — e
 a skill correspondente é usada automaticamente.
+
+## Templates
+
+Os templates vivem em `templates/` dentro deste monorepo e são consumidos com
+[`tiged`](https://github.com/tiged/tiged) (sucessor do degit), que baixa só a
+subpasta, sem histórico git — mesmo padrão do `create-next-app --example` e do
+Turborepo:
+
+```bash
+npx tiged Adalink-ai/adalink-integration-kit/templates/nextjs meu-app
+cd meu-app && git init && pnpm install
+```
+
+> O template NextJS ainda está no [roadmap](#roadmap) — o comando acima passa a
+> funcionar assim que `templates/nextjs` for publicado.
 
 ## Começando do zero
 

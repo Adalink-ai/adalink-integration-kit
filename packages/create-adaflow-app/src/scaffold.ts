@@ -9,11 +9,27 @@ export const TEMPLATES = ['nextjs'] as const;
 export type TemplateName = (typeof TEMPLATES)[number];
 export const DEFAULT_TEMPLATE: TemplateName = 'nextjs';
 
+export const SDK_PACKAGE = '@adaflow/sdk';
+
+/** Usada se o registry estiver inacessível no momento do scaffold. */
+export const SDK_FALLBACK_VERSION = '^0.1.0';
+
 /**
- * Versão publicada do @adaflow/sdk gravada no app gerado. Dentro do monorepo o
- * template usa `workspace:*`, que não resolve fora dele — o scaffold reescreve.
+ * Resolve a versão mais recente do @adaflow/sdk no registry npm, como range
+ * `^x.y.z`. Cai no fallback em qualquer falha — scaffold funciona offline.
  */
-export const SDK_PUBLISHED_VERSION = '^0.1.0';
+export async function resolveSdkVersion(fetchImpl: typeof fetch = fetch): Promise<string> {
+  try {
+    const res = await fetchImpl(
+      `https://registry.npmjs.org/${SDK_PACKAGE.replace('/', '%2f')}/latest`,
+    );
+    if (!res.ok) return SDK_FALLBACK_VERSION;
+    const { version } = (await res.json()) as { version?: string };
+    return version ? `^${version}` : SDK_FALLBACK_VERSION;
+  } catch {
+    return SDK_FALLBACK_VERSION;
+  }
+}
 
 export function isTemplateName(value: string): value is TemplateName {
   return (TEMPLATES as readonly string[]).includes(value);
@@ -39,17 +55,22 @@ export function validateProjectName(name: string): string | null {
 
 /**
  * Reescreve o package.json do app gerado: aplica o nome do projeto e troca a
- * dependência `workspace:*` do @adaflow/sdk pela versão publicada.
+ * dependência `workspace:*` do @adaflow/sdk pela versão publicada
+ * (resolvida via `resolveSdkVersion`).
  */
-export function rewritePackageJson(raw: string, projectName: string): string {
+export function rewritePackageJson(
+  raw: string,
+  projectName: string,
+  sdkVersion: string = SDK_FALLBACK_VERSION,
+): string {
   const pkg = JSON.parse(raw) as Record<string, unknown>;
   pkg['name'] = projectName;
 
   for (const field of ['dependencies', 'devDependencies'] as const) {
     const deps = pkg[field] as Record<string, string> | undefined;
-    const sdkVersion = deps?.['@adaflow/sdk'];
-    if (deps && sdkVersion?.startsWith('workspace:')) {
-      deps['@adaflow/sdk'] = SDK_PUBLISHED_VERSION;
+    const current = deps?.[SDK_PACKAGE];
+    if (deps && current?.startsWith('workspace:')) {
+      deps[SDK_PACKAGE] = sdkVersion;
     }
   }
 

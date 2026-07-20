@@ -87,4 +87,20 @@ Monorepo pnpm workspaces (`packages/*`, `templates/*`). Requer Node 22+ e pnpm 1
 
 ```bash
 pnpm install
+pnpm -r typecheck && pnpm -r test && pnpm -r build
 ```
+
+### Release (Changesets)
+
+Publicação no npm é automatizada via [Changesets](https://github.com/changesets/changesets)
+(`.github/workflows/release.yml`):
+
+1. No PR que altera um pacote publicável, rode `pnpm changeset` — escolha o(s)
+   pacote(s), o bump (patch/minor/major) e escreva o resumo do changelog. O
+   arquivo gerado em `.changeset/` vai junto no PR.
+2. Ao entrar na `main`, a action abre/atualiza o PR **"Version Packages"**
+   acumulando os bumps pendentes e os CHANGELOGs.
+3. **Merge do PR de versão = publish automático** no npm dos pacotes alterados.
+
+PR sem changeset não gera release — mudanças em docs, skills e templates não
+precisam de changeset. A CI de PRs (`ci.yml`) roda typecheck + test + build.

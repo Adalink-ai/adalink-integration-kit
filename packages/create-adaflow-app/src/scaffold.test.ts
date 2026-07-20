@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SDK_PUBLISHED_VERSION,
+  SDK_FALLBACK_VERSION,
   buildTemplateSource,
   isTemplateName,
+  resolveSdkVersion,
   rewritePackageJson,
   validateProjectName,
 } from './scaffold.js';
@@ -63,8 +64,17 @@ describe('rewritePackageJson', () => {
     });
     const out = JSON.parse(rewritePackageJson(raw, 'meu-app'));
     expect(out.name).toBe('meu-app');
-    expect(out.dependencies['@adaflow/sdk']).toBe(SDK_PUBLISHED_VERSION);
+    expect(out.dependencies['@adaflow/sdk']).toBe(SDK_FALLBACK_VERSION);
     expect(out.dependencies.next).toBe('^16.0.0');
+  });
+
+  it('usa a versão resolvida do registry quando informada', () => {
+    const raw = JSON.stringify({
+      name: 't',
+      dependencies: { '@adaflow/sdk': 'workspace:*' },
+    });
+    const out = JSON.parse(rewritePackageJson(raw, 'meu-app', '^0.3.1'));
+    expect(out.dependencies['@adaflow/sdk']).toBe('^0.3.1');
   });
 
   it('troca também em devDependencies', () => {
@@ -73,7 +83,7 @@ describe('rewritePackageJson', () => {
       devDependencies: { '@adaflow/sdk': 'workspace:^' },
     });
     const out = JSON.parse(rewritePackageJson(raw, 'meu-app'));
-    expect(out.devDependencies['@adaflow/sdk']).toBe(SDK_PUBLISHED_VERSION);
+    expect(out.devDependencies['@adaflow/sdk']).toBe(SDK_FALLBACK_VERSION);
   });
 
   it('não mexe em versão que já não é workspace', () => {
@@ -93,5 +103,30 @@ describe('rewritePackageJson', () => {
 
   it('termina com newline', () => {
     expect(rewritePackageJson('{"name":"t"}', 'meu-app').endsWith('\n')).toBe(true);
+  });
+});
+
+describe('resolveSdkVersion', () => {
+  const okFetch = (version: unknown) =>
+    (async () => ({ ok: true, json: async () => ({ version }) })) as unknown as typeof fetch;
+
+  it('resolve a versão latest do registry como range ^', async () => {
+    await expect(resolveSdkVersion(okFetch('0.4.2'))).resolves.toBe('^0.4.2');
+  });
+
+  it('cai no fallback quando o registry responde não-2xx', async () => {
+    const notOk = (async () => ({ ok: false })) as unknown as typeof fetch;
+    await expect(resolveSdkVersion(notOk)).resolves.toBe(SDK_FALLBACK_VERSION);
+  });
+
+  it('cai no fallback quando o fetch lança (offline)', async () => {
+    const boom = (async () => {
+      throw new Error('network down');
+    }) as unknown as typeof fetch;
+    await expect(resolveSdkVersion(boom)).resolves.toBe(SDK_FALLBACK_VERSION);
+  });
+
+  it('cai no fallback quando o body não tem version', async () => {
+    await expect(resolveSdkVersion(okFetch(undefined))).resolves.toBe(SDK_FALLBACK_VERSION);
   });
 });

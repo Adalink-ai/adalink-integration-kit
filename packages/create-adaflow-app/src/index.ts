@@ -18,6 +18,7 @@ import {
   TEMPLATES,
   buildTemplateSource,
   isTemplateName,
+  resolveSdkVersion,
   rewritePackageJson,
   validateProjectName,
 } from './scaffold.js';
@@ -107,7 +108,8 @@ async function main(): Promise<void> {
 
   const pkgPath = join(targetDir, 'package.json');
   if (existsSync(pkgPath)) {
-    writeFileSync(pkgPath, rewritePackageJson(readFileSync(pkgPath, 'utf8'), projectName));
+    const sdkVersion = await resolveSdkVersion();
+    writeFileSync(pkgPath, rewritePackageJson(readFileSync(pkgPath, 'utf8'), projectName, sdkVersion));
   }
 
   try {

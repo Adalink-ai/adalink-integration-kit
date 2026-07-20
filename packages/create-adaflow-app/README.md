@@ -26,9 +26,9 @@ Opções:
 1. Baixa `templates/<nome>` do monorepo via [tiged](https://github.com/tiged/tiged)
    — só a subpasta, sem histórico git.
 2. Aplica o nome do projeto no `package.json` gerado.
-3. Troca a dependência `workspace:*` do `@adaflow/sdk` pela versão publicada
-   (dentro do monorepo o template usa protocolo de workspace, que não resolve
-   fora dele).
+3. Troca a dependência `workspace:*` do `@adaflow/sdk` pela versão mais
+   recente publicada no registry (dentro do monorepo o template usa protocolo
+   de workspace, que não resolve fora dele). Offline, usa um fallback fixo.
 4. Roda `git init` no diretório criado (best-effort — avisa se git não estiver
    disponível).
 

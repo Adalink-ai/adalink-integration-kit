@@ -11,6 +11,7 @@ breve, template NextJS.
 | [`docs/`](./docs) | [Guia de uso para apps integrados](./docs/INTEGRATED-APPS-GUIDE.md) (SSO, agentes, chat OpenAI-compatible, repositórios de conhecimento) e o [contrato da API OpenAI-compatible](./docs/OPENAI-COMPAT.md) |
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
 | [`packages/sdk`](./packages/sdk) | [`@adalink/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
+| [`packages/create-adaflow-app`](./packages/create-adaflow-app) | [`create-adaflow-app`](./packages/create-adaflow-app/README.md) — CLI que cria um app integrado a partir dos templates |
 | `templates/` | Templates de app integrado, consumidos via [`tiged`](#templates) (NextJS em breve) |
 
 ## Skills
@@ -41,18 +42,27 @@ a skill correspondente é usada automaticamente.
 
 ## Templates
 
-Os templates vivem em `templates/` dentro deste monorepo e são consumidos com
-[`tiged`](https://github.com/tiged/tiged) (sucessor do degit), que baixa só a
-subpasta, sem histórico git — mesmo padrão do `create-next-app --example` e do
-Turborepo:
+Os templates vivem em `templates/` dentro deste monorepo. O jeito recomendado
+de consumir é a CLI [`create-adaflow-app`](./packages/create-adaflow-app/README.md),
+que baixa o template, aplica o nome do projeto, ajusta a dependência do
+`@adalink/sdk` e roda `git init`:
+
+```bash
+pnpm create adaflow-app meu-app
+cd meu-app && pnpm install
+```
+
+Alternativa manual com [`tiged`](https://github.com/tiged/tiged) (sucessor do
+degit), que baixa só a subpasta, sem histórico git — mesmo padrão do
+`create-next-app --example` e do Turborepo:
 
 ```bash
 npx tiged Adalink-ai/adalink-integration-kit/templates/nextjs meu-app
 cd meu-app && git init && pnpm install
 ```
 
-> O template NextJS ainda está no [roadmap](#roadmap) — o comando acima passa a
-> funcionar assim que `templates/nextjs` for publicado.
+> O template NextJS ainda está no [roadmap](#roadmap) — os comandos acima
+> passam a funcionar assim que `templates/nextjs` for publicado.
 
 ## Começando do zero
 
@@ -66,7 +76,9 @@ cd meu-app && git init && pnpm install
 ## Roadmap
 
 - [x] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
+- [x] `packages/create-adaflow-app` — CLI de scaffold a partir dos templates
 - [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
+- [ ] Publicar `@adalink/sdk` e `create-adaflow-app` no registry npm
 
 ## Desenvolvimento
 

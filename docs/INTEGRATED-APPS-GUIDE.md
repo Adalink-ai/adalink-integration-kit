@@ -131,14 +131,14 @@ Passo a passo:
    const params = new URLSearchParams(window.location.hash.slice(1));
    const token = params.get('sso_token');
    if (token) {
-     sessionStorage.setItem('adalink:jwt', decodeURIComponent(token));
+     sessionStorage.setItem('adaflow:jwt', decodeURIComponent(token));
      // Remove o token do histórico do browser
      history.replaceState(null, '', window.location.pathname + window.location.search);
    }
 
    // Nas chamadas à API
    const res = await fetch('https://adalink-api-gateway.onrender.com/v1/autonomous-agents', {
-     headers: { Authorization: `Bearer ${sessionStorage.getItem('adalink:jwt')}` },
+     headers: { Authorization: `Bearer ${sessionStorage.getItem('adaflow:jwt')}` },
    });
    ```
 

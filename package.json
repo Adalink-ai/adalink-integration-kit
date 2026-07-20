@@ -1,0 +1,15 @@
+{
+  "name": "adalink-integration-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kit oficial de integração com a plataforma Adalink/Adaflow: docs, skills, SDK e templates",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adalink-ai/adalink-integration-kit.git"
+  },
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=22"
+  }
+}

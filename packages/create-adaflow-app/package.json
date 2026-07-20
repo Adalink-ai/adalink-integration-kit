@@ -1,6 +1,6 @@
 {
   "name": "create-adaflow-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI oficial para criar apps integrados à plataforma Adaflow a partir dos templates do integration kit",
   "repository": {
     "type": "git",

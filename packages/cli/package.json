@@ -1,6 +1,6 @@
 {
   "name": "@adaflow/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "CLI oficial da plataforma Adaflow — instala e atualiza skills de agente (Claude Code) nos projetos integrados",
   "repository": {
     "type": "git",

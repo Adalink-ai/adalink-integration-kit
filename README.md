@@ -79,7 +79,7 @@ cd meu-app && git init && pnpm install
 - [x] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
 - [x] `packages/create-adaflow-app` — CLI de scaffold a partir dos templates
 - [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
-- [ ] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm
+- [x] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm (0.1.0, 2026-07-20)
 
 ## Desenvolvimento
 

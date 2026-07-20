@@ -2,8 +2,8 @@
 
 Kit oficial para integrar apps parceiros e de clientes ao Adaflow, a
 plataforma de IA da Adalink: documentação, skills de agente (Claude Code),
-SDK TypeScript (`@adaflow/sdk`), CLI de scaffold (`create-adaflow-app`) e, em
-breve, template NextJS.
+SDK TypeScript (`@adaflow/sdk`), CLI de scaffold (`create-adaflow-app`) e
+template NextJS pronto para produção.
 
 ## O que tem aqui
 
@@ -14,7 +14,7 @@ breve, template NextJS.
 | [`packages/sdk`](./packages/sdk) | [`@adaflow/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
 | [`packages/create-adaflow-app`](./packages/create-adaflow-app) | [`create-adaflow-app`](./packages/create-adaflow-app/README.md) — CLI que cria um app integrado a partir dos templates |
 | [`packages/cli`](./packages/cli) | [`@adaflow/cli`](./packages/cli/README.md) — binário `adaflow`; instala e atualiza as skills nos projetos (`adaflow skills add\|update\|list`) |
-| `templates/` | Templates de app integrado, consumidos via [`tiged`](#templates) (NextJS em breve) |
+| [`templates/nextjs`](./templates/nextjs) | Starter NextJS + Tailwind 4 + shadcn/ui + Prisma com SSO handoff e chat com IA prontos — via [`create-adaflow-app`](#templates) |
 
 ## Skills
 
@@ -69,9 +69,6 @@ npx tiged Adalink-ai/adalink-integration-kit/templates/nextjs meu-app
 cd meu-app && git init && pnpm install
 ```
 
-> O template NextJS ainda está no [roadmap](#roadmap) — os comandos acima
-> passam a funcionar assim que `templates/nextjs` for publicado.
-
 ## Começando do zero
 
 1. Leia o [guia de apps integrados](./docs/INTEGRATED-APPS-GUIDE.md) — visão
@@ -85,7 +82,7 @@ cd meu-app && git init && pnpm install
 
 - [x] `packages/sdk` — SDK TypeScript com client tipado (auth, agents, chat, repositories)
 - [x] `packages/create-adaflow-app` — CLI de scaffold a partir dos templates
-- [ ] `templates/nextjs` — app NextJS de referência com SSO handoff e chat de especialista prontos
+- [x] `templates/nextjs` — starter NextJS (Tailwind 4, shadcn/ui, Prisma) com SSO handoff e chat com IA
 - [x] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm (0.1.0, 2026-07-20)
 - [x] `packages/cli` — `@adaflow/cli` (binário `adaflow`) com `skills add|update|list`
 

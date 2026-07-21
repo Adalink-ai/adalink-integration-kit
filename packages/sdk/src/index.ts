@@ -8,7 +8,7 @@ import { SpecialistsResource } from './resources/specialists.js';
 import { TelemetryResource } from './resources/telemetry.js';
 
 export type { AdaflowClientOptions, TokenProvider } from './http.js';
-export { DEFAULT_BASE_URL } from './http.js';
+export { DEFAULT_BASE_URL, resolveBaseUrl } from './http.js';
 export { AdaflowApiError } from './errors.js';
 export { buildHandoffUrl, consumeSsoToken } from './sso.js';
 export type { ConsumeSsoTokenOptions } from './sso.js';
@@ -77,7 +77,7 @@ export class AdaflowClient {
   readonly governance: GovernanceResource;
   readonly telemetry: TelemetryResource;
 
-  constructor(options: AdaflowClientOptions) {
+  constructor(options: AdaflowClientOptions = {}) {
     const http = new HttpTransport(options);
     const fetchImpl = options.fetch ?? fetch;
     this.chat = new ChatResource(http);

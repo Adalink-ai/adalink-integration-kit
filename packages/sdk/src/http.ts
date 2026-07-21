@@ -16,13 +16,34 @@ export interface AdaflowClientOptions {
    * x-ada-token quando ambos os headers chegam, então o SDK envia só um.
    */
   appToken?: TokenProvider;
-  /** Base URL do API Gateway. Default: produção. */
+  /**
+   * Base URL do API Gateway. Resolução: valor explícito → env
+   * `ADAFLOW_BASE_URL` → default de produção. Clientes private label com API
+   * customizada só precisam setar a env — sem mudança de código.
+   */
   baseUrl?: string;
   /** Implementação de fetch (para testes ou ambientes sem fetch global). */
   fetch?: typeof fetch;
 }
 
 export const DEFAULT_BASE_URL = 'https://adalink-api-gateway.onrender.com';
+
+/** Leitura segura de env — em browser/bundlers `process` pode não existir. */
+function envVar(name: string): string | undefined {
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  const value = proc?.env?.[name];
+  return value && value.trim().length > 0 ? value : undefined;
+}
+
+/** Base URL efetiva: explícita → env ADAFLOW_BASE_URL → default de produção. */
+export function resolveBaseUrl(explicit?: string): string {
+  return (explicit ?? envVar('ADAFLOW_BASE_URL') ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+}
+
+/** App token do ambiente: ADAFLOW_APP_TOKEN (canônica) ou ADA_TOKEN (alias). */
+export function resolveEnvAppToken(): string | undefined {
+  return envVar('ADAFLOW_APP_TOKEN') ?? envVar('ADA_TOKEN');
+}
 
 async function resolveToken(provider: TokenProvider): Promise<string> {
   return typeof provider === 'function' ? provider() : provider;
@@ -44,14 +65,16 @@ export class HttpTransport {
   private readonly options: AdaflowClientOptions;
   readonly baseUrl: string;
 
-  constructor(options: AdaflowClientOptions) {
-    if (!options.jwt && !options.appToken) {
+  constructor(options: AdaflowClientOptions = {}) {
+    const appToken = options.appToken ?? resolveEnvAppToken();
+    if (!options.jwt && !appToken) {
       throw new Error(
-        'Informe uma credencial: jwt (usuário logado, preferido) ou appToken (server-to-server).',
+        'Informe uma credencial: jwt (usuário logado, preferido) ou appToken (server-to-server) — ' +
+          'ou defina ADAFLOW_APP_TOKEN no ambiente.',
       );
     }
-    this.options = options;
-    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+    this.options = { ...options, appToken };
+    this.baseUrl = resolveBaseUrl(options.baseUrl);
   }
 
   private get fetchImpl(): typeof fetch {

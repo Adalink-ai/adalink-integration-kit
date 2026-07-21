@@ -34,8 +34,16 @@ const client = new AdaflowClient({
 const s2s = new AdaflowClient({ appToken: process.env.ADAFLOW_APP_TOKEN! });
 ```
 
-`baseUrl` tem default de produção (`https://adalink-api-gateway.onrender.com`);
-informe outro para homolog/local.
+`baseUrl` resolve nesta ordem: valor explícito → env **`ADAFLOW_BASE_URL`** →
+default de produção (`https://adalink-api-gateway.onrender.com`). Clientes
+private label com API própria só setam a env — zero mudança de código. O app
+token também pode vir do ambiente (**`ADAFLOW_APP_TOKEN`**, alias `ADA_TOKEN`),
+permitindo `new AdaflowClient()` sem argumentos em integrações server-to-server:
+
+```ts
+// ADAFLOW_BASE_URL=https://api.cliente.com  ADAFLOW_APP_TOKEN=ada_...
+const client = new AdaflowClient(); // pronto — private label, sem usuário logado
+```
 
 ## SSO handoff (browser)
 

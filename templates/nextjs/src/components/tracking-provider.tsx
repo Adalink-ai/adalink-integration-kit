@@ -15,24 +15,28 @@ export function TrackingProvider() {
   const pathname = usePathname();
   const handleRef = useRef<SessionTrackingHandle | null>(null);
 
+  // Tenta iniciar a CADA mudança de rota (não só no mount): no fluxo SSO o
+  // provider monta antes do callback gravar o JWT, e a navegação seguinte é
+  // client-side — sem esta re-tentativa a sessão nunca começaria.
   useEffect(() => {
-    if (!getJwt() || handleRef.current) return;
-    try {
-      handleRef.current = startSessionTracking(getTrackingClient());
-    } catch {
-      // Telemetria nunca quebra o app.
+    if (!handleRef.current && getJwt()) {
+      try {
+        handleRef.current = startSessionTracking(getTrackingClient());
+      } catch {
+        // Telemetria nunca quebra o app.
+      }
     }
-    const handle = handleRef.current;
+    handleRef.current?.pageView(pathname);
+  }, [pathname]);
+
+  // Encerra a sessão só no unmount real do app.
+  useEffect(() => {
     return () => {
+      const handle = handleRef.current;
       handleRef.current = null;
       void handle?.stop();
     };
   }, []);
-
-  // Page-view a cada mudança de rota do App Router.
-  useEffect(() => {
-    handleRef.current?.pageView(pathname);
-  }, [pathname]);
 
   return null;
 }

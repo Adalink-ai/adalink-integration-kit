@@ -57,3 +57,17 @@ describe('HttpTransport — credencial', () => {
     await expect(transport.authHeaders()).resolves.toEqual({ authorization: 'Bearer meu-jwt' });
   });
 });
+
+describe('HttpTransport — binding do fetch (regressão browser)', () => {
+  it('não lança Illegal invocation com fetch this-sensitive (como o do window)', async () => {
+    // Simula o fetch do browser: exige this === globalThis/undefined-bound.
+    function strictFetch(this: unknown): Promise<Response> {
+      if (this !== globalThis && this !== undefined) {
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+      }
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    }
+    const transport = new HttpTransport({ jwt: 'j', fetch: strictFetch as typeof fetch });
+    await expect(transport.request('/v1/ping')).resolves.toBeInstanceOf(Response);
+  });
+});

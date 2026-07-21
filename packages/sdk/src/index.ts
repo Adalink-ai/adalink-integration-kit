@@ -79,7 +79,8 @@ export class AdaflowClient {
 
   constructor(options: AdaflowClientOptions = {}) {
     const http = new HttpTransport(options);
-    const fetchImpl = options.fetch ?? fetch;
+    // bind(globalThis): fetch do browser exige this === window (Illegal invocation)
+    const fetchImpl = (options.fetch ?? fetch).bind(globalThis);
     this.chat = new ChatResource(http);
     this.agents = new AgentsResource(http);
     this.specialists = new SpecialistsResource(http);

@@ -78,7 +78,9 @@ export class HttpTransport {
   }
 
   private get fetchImpl(): typeof fetch {
-    return this.options.fetch ?? fetch;
+    // bind(globalThis): o fetch do browser exige `this === window` — invocado
+    // como método do transport lançaria "TypeError: Illegal invocation".
+    return (this.options.fetch ?? fetch).bind(globalThis);
   }
 
   /** Header de auth: JWT preferido; app token via x-ada-token como fallback. */

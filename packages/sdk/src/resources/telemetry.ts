@@ -2,9 +2,18 @@ import type { HttpTransport } from '../http.js';
 import { chunkBatch } from '../tracker-core.js';
 
 export interface PageView {
-  path: string;
-  occurredAt?: string;
-  [key: string]: unknown;
+  /** Path da rota visitada (ex.: '/contratos'). Máx. 500 chars. */
+  route: string;
+  /** Quando a view aconteceu (default: agora). */
+  viewedAt?: string | Date;
+  /** Querystring — NUNCA inclua tokens/PII. */
+  query?: string;
+  /** Rota anterior. */
+  referer?: string;
+  /** Correlação de sessão (default: o sessionId do batch). */
+  sessionId?: string;
+  /** Tempo de permanência em ms (enviado ao sair da rota). */
+  durationMs?: number;
 }
 
 const PAGE_VIEWS_BATCH_MAX = 50;
@@ -28,12 +37,24 @@ export class TelemetryResource {
     });
   }
 
-  /** Registra page-views (chunking automático em lotes de 50). */
-  async pageViews(params: { sessionId: string; views: PageView[] }): Promise<void> {
+  /**
+   * Registra page-views (chunking automático em lotes de 50).
+   * Contrato do endpoint: `{ events: [{ route, viewedAt, ... }] }`.
+   */
+  async pageViews(params: { sessionId?: string; views: PageView[] }): Promise<void> {
     for (const chunk of chunkBatch(params.views, PAGE_VIEWS_BATCH_MAX)) {
       await this.http.request('/v1/telemetry/page-view', {
         method: 'POST',
-        body: { sessionId: params.sessionId, views: chunk },
+        body: {
+          events: chunk.map((view) => ({
+            ...view,
+            viewedAt:
+              view.viewedAt instanceof Date
+                ? view.viewedAt.toISOString()
+                : (view.viewedAt ?? new Date().toISOString()),
+            sessionId: view.sessionId ?? params.sessionId,
+          })),
+        },
       });
     }
   }

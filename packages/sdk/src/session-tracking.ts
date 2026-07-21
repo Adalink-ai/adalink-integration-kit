@@ -44,7 +44,7 @@ export function startSessionTracking(
 
   let timer: ReturnType<typeof setInterval> | null = null;
   let stopped = false;
-  const pendingViews: { path: string; occurredAt: string }[] = [];
+  const pendingViews: { route: string; viewedAt: string }[] = [];
 
   const beat = () => {
     client.telemetry.heartbeat({ sessionId: sessionId! }).catch(() => undefined);
@@ -85,8 +85,8 @@ export function startSessionTracking(
     sessionId,
     pageView(path?: string): void {
       pendingViews.push({
-        path: path ?? window.location.pathname,
-        occurredAt: new Date().toISOString(),
+        route: path ?? window.location.pathname,
+        viewedAt: new Date().toISOString(),
       });
     },
     async stop(): Promise<void> {

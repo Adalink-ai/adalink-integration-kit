@@ -1,6 +1,6 @@
 {
   "name": "@adaflow/sdk",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "SDK Node/TypeScript oficial para integração com a plataforma Adaflow",
   "repository": {
     "type": "git",

@@ -1,5 +1,14 @@
 # @adaflow/sdk
 
+## 0.3.2
+
+### Patch Changes
+
+- 65e6e14: Corrige o contrato de `telemetry.pageViews`/`startSessionTracking` com o
+  endpoint real `/v1/telemetry/page-view`: envelope `{ events: [...] }` com
+  `route` e `viewedAt` (antes enviava `{ sessionId, views }` com `path`, que
+  respondia 400). Validado contra o ambiente real.
+
 ## 0.3.1
 
 ### Patch Changes

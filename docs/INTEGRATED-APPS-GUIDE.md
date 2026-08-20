@@ -123,29 +123,66 @@ Passo a passo:
    `/login?returnTo=/sso/handoff?redirect-url=...`; após o login o usuário
    volta automaticamente ao handoff e o token é entregue (passo 3).
 
-5. **No seu app**, leia o fragment, extraia o token, **limpe a URL** e use o
-   JWT nas chamadas ao gateway:
+5. **No seu app**, use `createSsoSession` do `@adaflow/sdk` — ele guarda o
+   token, anexa o `Authorization`, renova em 401 e traz as proteções
+   anti-loop de redirect já embutidas:
 
    ```ts
-   // No load da página de destino do redirect-url
-   const params = new URLSearchParams(window.location.hash.slice(1));
-   const token = params.get('sso_token');
-   if (token) {
-     sessionStorage.setItem('adaflow:jwt', decodeURIComponent(token));
-     // Remove o token do histórico do browser
-     history.replaceState(null, '', window.location.pathname + window.location.search);
-   }
+   import { createSsoSession } from '@adaflow/sdk';
 
-   // Nas chamadas à API
-   const res = await fetch('https://adalink-api-gateway.onrender.com/v1/autonomous-agents', {
-     headers: { Authorization: `Bearer ${sessionStorage.getItem('adaflow:jwt')}` },
+   export const session = createSsoSession({
+     adaflowUrl: 'https://<adaflow>',
+     callbackUrl: '/auth/callback', // página do redirect-url (default)
+     onSessionLost: () => {
+       // renovação automática esgotada — mostre sua tela de "Entrar".
+       // NÃO redirecione ao handoff daqui: recriaria o loop.
+     },
    });
+
+   // Botão "Entrar com Adaflow"
+   session.login();
+
+   // Na página /auth/callback (destino do redirect-url)
+   session.completeLogin(); // consome #sso_token, salva e limpa a URL
+
+   // Nas chamadas à API — renovação em 401 já tratada
+   const res = await session.fetch(
+     'https://adalink-api-gateway.onrender.com/v1/autonomous-agents',
+   );
+
+   // UI reativa (React): useSyncExternalStore(session.subscribe, session.getJwt, () => null)
    ```
 
-6. **Expiração**: o JWT é de curta duração. Ao receber `401` do gateway,
-   refaça o handoff (redirecione novamente para `/sso/handoff?redirect-url=...`).
-   Se a sessão do Adaflow ainda existir, o ciclo é transparente para o
-   usuário — ele volta ao seu app já com um token novo, sem digitar senha.
+6. **Expiração**: o JWT é de curta duração; não existe refresh token — renovar
+   é repetir o handoff. Se a sessão do Adaflow ainda existir, o ciclo é
+   transparente para o usuário: ele volta ao seu app já com um token novo, sem
+   digitar senha. `session.fetch` faz isso sozinho ao receber `401` (e
+   proativamente quando o `exp` do token já passou).
+
+   > **Se for implementar a renovação à mão** (sem `createSsoSession`), três
+   > armadilhas já causaram loop infinito de redirect em produção — todas
+   > invisíveis nos testes com 401 consistente e disparadas justamente quando
+   > a sessão do Adaflow está viva (a volta do handoff é instantânea):
+   >
+   > 1. **Guarda de retry rearmável.** Dashboards fazem dezenas de chamadas em
+   >    paralelo e respostas `200`/`401` chegam misturadas (cache de validação
+   >    por instância no seu servidor, instabilidade momentânea do gateway).
+   >    Uma guarda "liberada quando alguma chamada dá certo" é rearmada por
+   >    cada `200`, e o `401` seguinte dispara outro handoff — para sempre.
+   >    Use uma guarda **por tempo** (cooldown, ex.: 60s) que nenhuma resposta
+   >    individual consegue rearmar.
+   > 2. **401 sem dono.** Uma request em voo com o token antigo responde `401`
+   >    atrasado depois de o handoff já ter salvo o token novo; reagir a ela
+   >    apaga a sessão recém-renovada. Só trate o `401` se o token **daquela
+   >    request** ainda for o corrente.
+   > 3. **Redirects concorrentes.** Vários `401` simultâneos disparam vários
+   >    handoffs. Depois que um redirect começou, ignore os demais
+   >    (single-flight).
+   >
+   > E no **seu servidor**, se ele valida o JWT perguntando ao gateway: gateway
+   > inacessível deve virar `503`, nunca `401` — instabilidade de rede não é
+   > sessão morta, e um `401` falso derruba a sessão do usuário e alimenta o
+   > ciclo acima.
 
 > **Nota — `/sso/finish` não é para apps integrados.** Existe uma variante de
 > handoff (`/sso/finish#ott=...` + `POST /v1/auth/sso/handoff/exchange`) usada

@@ -50,19 +50,28 @@ const client = new AdaflowClient(); // pronto — private label, sem usuário lo
 O Adaflow é o Identity Provider. O app redireciona para o handoff e recebe o
 JWT no fragment `#sso_token=` (não vai ao servidor nem vaza por Referer):
 
+Use a sessão gerenciada — ela guarda o token, anexa o `Authorization`, renova
+em 401 e traz as proteções anti-loop de redirect (guarda por cooldown, 401
+amarrado ao token da request, single-flight):
+
 ```ts
-import { buildHandoffUrl, consumeSsoToken } from '@adaflow/sdk';
+import { createSsoSession } from '@adaflow/sdk';
 
-// 1. Redireciona para o Adaflow
-location.href = buildHandoffUrl('https://app.adalink.ai', 'https://meuapp.com/sso/callback');
+const session = createSsoSession({
+  adaflowUrl: 'https://app.adalink.ai',
+  onSessionLost: () => mostrarTelaDeLogin(),
+});
 
-// 2. Na página de callback: extrai o token e limpa a URL
-const jwt = consumeSsoToken();
-if (jwt) sessionStorage.setItem('adaflow:jwt', jwt);
+session.login();         // botão "Entrar" → redireciona ao handoff
+session.completeLogin(); // na página de callback: consome #sso_token e limpa a URL
+
+// Renovação em 401 já embutida; com sessão ativa no Adaflow é transparente
+const res = await session.fetch('https://adalink-api-gateway.onrender.com/v1/autonomous-agents');
 ```
 
-Quando o JWT expira, `AdaflowApiError.isAuthError` fica `true` — refaça o
-handoff (com sessão ativa no Adaflow o redirect volta imediatamente).
+As pontas do fluxo continuam disponíveis soltas (`buildHandoffUrl`,
+`consumeSsoToken`) — mas o tratamento manual de 401 é fácil de errar (loop
+infinito de redirect); prefira `createSsoSession`.
 
 ## Chat (genérico e especialista)
 

@@ -34,6 +34,7 @@ export type {
   ChatCompletionChunk,
   ChatResult,
   ChatStream,
+  ChatUsage,
 } from './resources/chat.js';
 export type {
   AutonomousAgent,

@@ -24,7 +24,8 @@ export class SpecialistsResource {
 
   /**
    * Vincula um repositório de conhecimento ao especialista — os arquivos
-   * passam a compor o RAG em todas as conversas (inclusive `assistant:<uuid>`).
+   * passam a compor o RAG nas conversas pelo chat do Adaflow (as chamadas
+   * `assistant:<uuid>` via `/v1/openai` ainda não aplicam RAG).
    * `409` = já vinculado; `404` = repositório não visível (anti-IDOR).
    */
   async linkRepository(specialistId: string, repositoryId: string): Promise<{ success: boolean }> {

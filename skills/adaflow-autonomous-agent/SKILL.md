@@ -11,7 +11,7 @@ Executa um **agente autônomo** da organização a partir deste app, passando o
 [guia de apps integrados](https://github.com/Adalink-ai/adalink-integration-kit/blob/main/docs/INTEGRATED-APPS-GUIDE.md)
 — seção 2.
 
-> Para conversar com um **especialista** (RAG/memória/conectores), NÃO é esta
+> Para conversar com um **especialista** (tools MCP/memória/conectores), NÃO é esta
 > API — use a skill `adaflow-assistants` (`assistant:<uuid>` no `/v1/openai`).
 
 ## Passos de implementação

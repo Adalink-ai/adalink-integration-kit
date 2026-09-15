@@ -51,8 +51,9 @@ vinculando ao especialista. Fonte de verdade: o
      -d "{\"fileId\": \"$FILE_ID\"}"
    ```
 
-3. **Vincular ao especialista** (o RAG passa a valer em todas as conversas,
-   inclusive via `assistant:<uuid>` — skill `adaflow-assistants`):
+3. **Vincular ao especialista** (o RAG passa a valer nas conversas com o
+   especialista **no chat do Adaflow** — ainda NÃO nas chamadas
+   `assistant:<uuid>` feitas por apps, ver guia seção 3.2):
 
    ```bash
    curl -X POST ".../v1/specialists/$SPECIALIST_ID/repositories" \
@@ -79,8 +80,9 @@ vinculando ao especialista. Fonte de verdade: o
 
 1. Criar repositório → 201 com `id`; slug inválido (maiúsculas) → 400.
 2. Ciclo completo de upload → arquivo aparece em `GET /:id/files` e, após o
-   processamento, o especialista vinculado responde pergunta cujo conteúdo só
-   existe no documento.
+   processamento, o especialista vinculado responde **no chat do Adaflow**
+   pergunta cujo conteúdo só existe no documento (pela API `assistant:<uuid>`
+   isso ainda não funciona — não use como critério de aceite do app).
 3. Upload sem confirm → arquivo NÃO utilizado pelo RAG (comportamento
    esperado, documente no app).
 4. Usuário sem role `ADMIN`/`CREATOR` → 403 no create (aviso informativo).

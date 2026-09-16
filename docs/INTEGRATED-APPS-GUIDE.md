@@ -16,8 +16,8 @@ Ele cobre as três superfícies de integração:
 | **SSO com Adaflow** (seção 1) | Autenticar o usuário no seu app sem tela de login própria | Sessão do Adaflow → JWT |
 | **API de agentes autônomos** (seção 2) | Executar um agente específico da organização passando o `agentId` | JWT do usuário |
 | **Chat OpenAI-compatible** (seção 3) | Chat genérico com qualquer modelo do catálogo, usando SDKs OpenAI | JWT do usuário (preferido) ou app token |
-| **Especialistas via `assistant:<uuid>`** (seção 3.2) | Conversar com um especialista da organização — com RAG, skills, conectores, memória server-side e governança | JWT do usuário (preferido) ou app token |
-| **Repositórios de conhecimento** (seção 4) | Criar bases de documentos, subir arquivos e vinculá-los ao RAG dos especialistas | JWT do usuário (`ADMIN`/`CREATOR`) |
+| **Especialistas via `assistant:<uuid>`** (seção 3.2) | Conversar com um especialista da organização — com skills, conectores, tools MCP, memória server-side e governança (RAG ainda não vale por API) | JWT do usuário (preferido) ou app token |
+| **Repositórios de conhecimento** (seção 4) | Criar bases de documentos, subir arquivos e vinculá-los ao RAG dos especialistas (usado no chat do Adaflow) | JWT do usuário (`ADMIN`/`CREATOR`) |
 
 ## Credenciais: prefira o JWT do usuário logado
 
@@ -55,7 +55,11 @@ Cuidados:
   ignorado.
 - **Exceção do `/v1/openai`**: somente nesse prefixo o app token também é
   aceito como `Authorization: Bearer` (é a "API key" dos SDKs OpenAI, que não
-  sabem enviar header custom). Fora dele, Bearer é sempre JWT.
+  sabem enviar header custom). **Em todas as outras rotas** (ex.:
+  `/v1/specialists`, `/v1/repositories`, `/v1/autonomous-agents`), sem JWT, o
+  app token vai **só** no header `x-ada-token` — enviado como Bearer, ele é
+  lido como JWT e a resposta é `401 invalid_token`. O `@adaflow/sdk` já faz
+  isso: `appToken` sempre sai como `x-ada-token`.
 - Tokens criados antes do multi-org (sem organização pinada) são rejeitados
   como `legacy_token` — rotacione ou crie um novo.
 
@@ -281,7 +285,7 @@ for (;;) {
 | `429` | Saldo de créditos insuficiente ou rate-limit | Verificar `GET /v1/wallet`; aplicar backoff |
 
 > **Especialistas não usam essa API.** Para conversar com um **especialista**
-> (assistant) da organização — com RAG, memória e governança — use a API
+> (assistant) da organização — com tools, memória e governança — use a API
 > OpenAI-compatible com `model: "assistant:<uuid>"` (seção 3.2). O UUID do
 > especialista vem de `GET /v1/specialists`.
 
@@ -314,6 +318,13 @@ funciona trocando apenas `baseURL` e API key. Documentação completa em
   `usage.recorded` (`metadata.source: 'openai-compat'`). Consumo em
   `GET /v1/usage`, saldo em `GET /v1/wallet`.
 
+> ⚠️ **Antes de migrar uma chamada de LLM para esta rota**, confira se ela
+> usa algo que ainda não é suportado. Estes campos são **descartados sem
+> erro** (a resposta volta `200`, mas errada): `response_format` — logo,
+> `generateObject`/`streamObject` do AI SDK — e `tools` do cliente. Conteúdo
+> multimodal (PDF, imagem) é recusado com `400`. Detalhes e alternativas na
+> seção 3.4 e em [OPENAI-COMPAT.md](./OPENAI-COMPAT.md#limitações-conhecidas).
+
 Exemplo mínimo (passthrough genérico, SDK OpenAI):
 
 ```ts
@@ -341,8 +352,8 @@ o valor do campo `model`. A escolha é uma decisão de **onde vive a
 inteligência do agente**:
 
 > **O agente vai ser usado no Adaflow e/ou em outros projetos, ou precisa de
-> RAG, conectores ou memória?** Crie o especialista **no Adaflow** e converse
-> com ele pela API de assistants (`model: "assistant:<uuid>"`).
+> conectores, tools MCP ou memória?** Crie o especialista **no Adaflow** e
+> converse com ele pela API de assistants (`model: "assistant:<uuid>"`).
 >
 > **É uma chamada genérica e pontual a uma LLM** (ex.: classificar um texto)?
 > Use a API genérica com um modelo do catálogo
@@ -351,8 +362,8 @@ inteligência do agente**:
 | Critério | API de assistants (`assistant:<uuid>`) | API genérica (`<gatewayId>`) |
 |---|---|---|
 | Onde o agente é definido | **No Adaflow** (prompt, modelo, bases, skills) — fonte única, reutilizado pelo Adaflow e por todos os apps integrados | No código do seu app (o prompt vai no `messages[]` de cada request) |
-| RAG (bases de conhecimento) | Sim — bases vinculadas ao especialista são consultadas automaticamente | Não |
-| Conectores e skills | Sim — ferramentas do especialista, com gate de aprovação | Não |
+| RAG (bases de conhecimento) | **Ainda não por API** — as bases vinculadas só são consultadas no chat do Adaflow (ver seção 3.2) | Não |
+| Conectores, skills e tools MCP | Sim — ferramentas do especialista, executadas server-side, com gate de aprovação | Não |
 | Memória / histórico | Sim — `chat_id` reidrata a conversa do especialista server-side | Stateless por natureza (o `chat_id` guarda histórico, mas sem contexto de especialista) |
 | Manutenção do prompt | Central, no Adaflow — ajustes valem para todos os apps sem deploy | Cada app mantém (e versiona) o próprio prompt |
 | Casos típicos | Assistente de vendas embutido no seu app, copiloto de suporte, qualquer agente que também atende usuários pelo Adaflow | Classificação, extração de campos, sumarização, tradução, moderação — transformações pontuais de texto |
@@ -363,39 +374,61 @@ Exemplos concretos:
   genérica: `model: "anthropic/claude-haiku-4.5"` com o prompt de
   classificação no próprio request. Criar um especialista para isso seria
   burocracia sem ganho — não há RAG, conector nem reuso pelo chat.
-- *"Meu app tem um assistente que responde sobre os documentos da empresa"* →
-  especialista no Adaflow com as bases vinculadas, consumido via
-  `assistant:<uuid>`. O mesmo especialista atende no chat do Adaflow e no seu
-  app, e o time ajusta o prompt/bases sem tocar no seu código.
+- *"Meu app tem um assistente que responde sobre os dados do próprio app"* →
+  o app expõe um servidor MCP com as consultas, o especialista no Adaflow
+  usa essas tools e o app conversa com ele via `assistant:<uuid>`. O mesmo
+  especialista atende no chat do Adaflow e no seu app, e o time ajusta o
+  prompt sem tocar no seu código.
 
 Nos dois modos a governança é a mesma: saldo de créditos, model-policy,
 allowlist por centro de custo e `usage.recorded` valem igualmente.
 
-### 3.2 Especialistas (assistants) — RAG, memória e governança
+### 3.2 Especialistas (assistants) — tools, memória e governança
 
 Este é o modo mais poderoso da integração: em vez de um modelo cru, seu app
-conversa com um **especialista** configurado na plataforma — e tudo o que o
+conversa com um **especialista** configurado na plataforma — e o que o
 especialista tem vale na resposta:
 
 - **Prompt e modelo pinado** — o system prompt e o modelo configurados no
   especialista são autoritativos (o `temperature`/`max_tokens` do request não
   trocam o modelo);
-- **RAG** — as bases de conhecimento vinculadas ao especialista são
-  consultadas automaticamente;
-- **Skills e conectores** — skills ativas e conectores (Drive, e-mail, etc.)
-  ficam disponíveis como ferramentas, incluindo o gate de aprovação quando a
-  ação exige consentimento;
+- **Skills, conectores e tools MCP** — skills ativas, conectores (Drive,
+  e-mail, etc.) e as tools dos servidores MCP habilitados no especialista
+  ficam disponíveis e **executam no servidor da plataforma**, incluindo o
+  gate de aprovação quando a ação exige consentimento. O cliente recebe só o
+  texto final, não `tool_calls`. As tools MCP ganham o nome
+  `mcp_<servidor>_<tool>` — regra completa em
+  [OPENAI-COMPAT.md](./OPENAI-COMPAT.md#tools-mcp-do-especialista-modo-assistant);
 - **Governança** — visibilidade por organização/time é validada (especialista
   de outra org responde `404 model_not_found`, nunca vaza), e o billing
   registra o `specialistId` no evento `usage.recorded`.
+
+> ⚠️ **RAG ainda não vale por API.** As bases de conhecimento vinculadas ao
+> especialista (seção 4) **não são consultadas** nas chamadas
+> `assistant:<uuid>` — só no chat da UI do Adaflow. Um teste pela UI
+> responder certo não garante o mesmo pelo app. Se o assistente do seu app
+> precisa de documentos, exponha a busca como **tool MCP do próprio app**
+> (padrão já validado em produção) até o suporte chegar.
 
 **Passo 1 — descobrir o UUID do especialista.** Especialistas não aparecem em
 `GET /v1/openai/models` (limitação do M1); liste-os pela API da plataforma:
 
 ```bash
+# Com usuário logado (JWT)
 curl "https://adalink-api-gateway.onrender.com/v1/specialists" \
   -H "Authorization: Bearer $ADALINK_JWT"
+
+# Server-side (app token) — SEMPRE no header x-ada-token nesta rota
+curl "https://adalink-api-gateway.onrender.com/v1/specialists" \
+  -H "x-ada-token: $ADALINK_APP_TOKEN"
 ```
+
+A exceção que aceita app token como `Authorization: Bearer` vale **só** no
+prefixo `/v1/openai`. Em `/v1/specialists`, um Bearer com app token é tratado
+como JWT e responde `401 invalid_token`. O usuário que criou o token precisa
+ter permissão de leitura de especialistas. Na prática, como o UUID muda
+raramente, configurar o `assistant:<uuid>` por variável de ambiente costuma
+bastar.
 
 Use o `id` (UUID) retornado — `assistant:<slug>` não é suportado no M1,
 apenas `assistant:<uuid>`.
@@ -435,8 +468,53 @@ reatribuição e persista o id efetivo para os turnos seguintes.
 
 Erros seguem o envelope OpenAI (`invalid_api_key`, `model_not_found`,
 `insufficient_quota`, `rate_limit_exceeded`, `model_blocked`,
-`request_forbidden`) — tabela completa e limitações do M1 (sem `tools`,
-`response_format` ou multimodal) em [OPENAI-COMPAT.md](./OPENAI-COMPAT.md).
+`request_forbidden`) — tabela completa e limitações conhecidas em
+[OPENAI-COMPAT.md](./OPENAI-COMPAT.md).
+
+### 3.3 Chat sem usuário logado (páginas públicas)
+
+Uma página pública do seu app (ex.: um assistente aberto ao leitor, sem
+login) não tem JWT. O único caminho é o **app token, usado exclusivamente no
+servidor do app**:
+
+```text
+browser (sem login) ──► rota do SEU app (/api/...) ──► /v1/openai/chat/completions
+                         app token fica aqui             (Bearer ou x-ada-token)
+```
+
+Regras:
+
+- **O app token nunca vai ao browser** — nem em variável `NEXT_PUBLIC_*`, nem
+  em bundle, nem em resposta. Quem tiver o token consome créditos da
+  organização em nome do usuário criador.
+- **Use um app token dedicado** para a página pública (descrição própria),
+  separado do token dos jobs server-side: se houver abuso, você rotaciona ou
+  revoga só ele (`POST /gateway/app-tokens/:id/rotate`).
+- **Proteja a rota do app**: rate-limit por IP/sessão, limite de tamanho da
+  mensagem e do histórico, e `max_tokens` fixo no servidor. O rate-limit da
+  plataforma é por token — ele protege a plataforma, não o saldo da sua org
+  contra um visitante abusivo.
+- **Fixe o `model` no servidor** (ex.: `assistant:<uuid>` por env) — nunca
+  aceite o modelo vindo do browser.
+- Toda a atividade fica auditada como o usuário criador do token; se precisar
+  distinguir o tráfego público, registre eventos próprios na trilha
+  (seção 5) com `app` identificando a página.
+
+### 3.4 Automações: saída estruturada e documentos
+
+Pipelines automáticas (cron, upload, botão) costumam precisar de **JSON
+validado por schema** e, às vezes, de **PDF como entrada**. Nenhum dos dois é
+suportado nesta rota ainda:
+
+| Precisa de | Situação hoje | O que fazer por enquanto |
+|---|---|---|
+| JSON por schema (`response_format`, `generateObject`) | Campo **descartado sem erro** — o modelo responde texto livre | Peça o JSON no prompt e **valide o `content`** com o schema no app (ex.: `zod.safeParse`), tratando falha de parse como erro com retry. Não confie em `generateObject` apontado para o Adaflow. |
+| PDF/imagem na mensagem | `content` multimodal → `400 invalid_request_error` | Extraia o texto no app e envie como string. Se o volume ou o custo não comportar, mantenha essa chamada no provider atual até o suporte sair. |
+| `tools` definidas pelo app | Descartadas sem erro | Exponha as tools como servidor MCP e use um especialista (seção 3.2). |
+
+Ao migrar uma pipeline, **teste com um caso em que o formato importa** (um
+schema com enum ou campo obrigatório) — um teste feliz em que o modelo "por
+acaso" responde JSON não prova nada.
 
 ---
 
@@ -445,8 +523,12 @@ Erros seguem o envelope OpenAI (`invalid_api_key`, `model_not_found`,
 Repositórios são bases de arquivos reutilizáveis que abastecem o RAG dos
 especialistas. O fluxo recorrente de um app integrado é: criar o repositório,
 subir os documentos do cliente e vinculá-lo a um especialista — a partir daí
-as conversas via `assistant:<uuid>` (seção 3.2) respondem com base nesses
-documentos.
+as conversas **no chat do Adaflow** com esse especialista respondem com base
+nesses documentos.
+
+> ⚠️ As conversas feitas pelo seu app via `assistant:<uuid>` **ainda não
+> consultam** essas bases (seção 3.2). Subir e vincular documentos pela API
+> funciona; o que falta é o RAG na rota `/v1/openai`.
 
 Autenticação: **JWT do usuário** (as rotas de escrita exigem role `ADMIN` ou
 `CREATOR`, a permissão `knowledge.repositories.create` e a feature flag
@@ -525,11 +607,11 @@ curl -X POST "https://adalink-api-gateway.onrender.com/v1/specialists/$SPECIALIS
   -d "{\"repositoryId\": \"$REPO_ID\"}"
 ```
 
-Os arquivos do repositório passam a compor o escopo RAG do especialista em
-**todas** as conversas — inclusive as feitas pelo seu app via
-`assistant:<uuid>` (seção 3.2). Respostas: `409` se já vinculado; `404` se o
-repositório não for visível para o usuário (anti-IDOR — a inexistência não é
-revelada).
+Os arquivos do repositório passam a compor o escopo RAG do especialista nas
+conversas pelo chat do Adaflow — **não** nas feitas pelo seu app via
+`assistant:<uuid>`, onde o RAG ainda não é aplicado (seção 3.2). Respostas:
+`409` se já vinculado; `404` se o repositório não for visível para o usuário
+(anti-IDOR — a inexistência não é revelada).
 
 ---
 

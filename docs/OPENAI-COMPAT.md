@@ -35,8 +35,8 @@ mascarado como 401. JWT sem organização preserva o 403 (`request_forbidden`).
 
 | Valor | Comportamento |
 |---|---|
-| `<gatewayId>` do catálogo curado (ex.: `anthropic/claude-sonnet-4.6`) | **Passthrough sem especialista**: sem prompt de especialista, sem RAG/skills. Governança, saldo e billing valem normalmente. |
-| `assistant:<uuid>` | Conversa com o **especialista** da organização (skills, RAG, conectores e gate de aprovação valem); o modelo pinado do especialista é autoritativo. Visibilidade validada (especialista de outra org → `model_not_found`). |
+| `<gatewayId>` do catálogo curado (ex.: `anthropic/claude-sonnet-4.6`) | **Passthrough sem especialista**: sem prompt de especialista, sem RAG, skills ou tools da plataforma. Governança, saldo e billing valem normalmente. Exige a permissão `chat.models.select` no usuário da credencial (sem ela → `403 model_blocked`). |
+| `assistant:<uuid>` | Conversa com o **especialista** da organização: prompt, skills, conectores, tools MCP e gate de aprovação valem, todos executados **server-side**; o modelo pinado do especialista é autoritativo. **RAG não é aplicado nesta rota** (ver [Limitações](#limitações-conhecidas)). Visibilidade validada (especialista de outra org → `model_not_found`). |
 | Desconhecido | `404` com `code: model_not_found`. |
 
 `GET /v1/openai/models` lista o catálogo curado no shape OpenAI
@@ -44,6 +44,9 @@ mascarado como 401. JWT sem organização preserva o 403 (`request_forbidden`).
 
 > **M1**: `assistant:<slug>` não é suportado (apenas UUID) e os especialistas
 > não aparecem em `GET /models` — obtenha o UUID em `GET /v1/specialists`.
+> Fora do prefixo `/v1/openai` o app token **não** é aceito como Bearer: para
+> listar especialistas server-side, envie-o no header `x-ada-token` (Bearer com
+> app token nessa rota responde `401 invalid_token`).
 
 ## Extensão `chat_id` — histórico server-side
 
@@ -71,6 +74,7 @@ auditoria). Com `chat_id`, o backend guarda e reidrata o histórico:
     { "role": "user", "content": "Resuma o fluxo de caixa do trimestre." }
   ],
   "stream": true,
+  "stream_options": { "include_usage": true },
   "temperature": 0.7,
   "max_tokens": 1024,
   "chat_id": "0197a3b2-1111-7222-8333-444455556666"
@@ -78,33 +82,60 @@ auditoria). Com `chat_id`, o backend guarda e reidrata o histórico:
 ```
 
 Campos aceitos: `model`, `messages` (roles `system`/`user`/`assistant`,
-`content` string), `stream`, `temperature`, `max_tokens`, `chat_id`, `user`
-(ignorado). Campos desconhecidos são **ignorados silenciosamente**
-(comportamento OpenAI). `tools`, `response_format` e conteúdo multimodal
-(imagens) ficam para o M2.
+`content` **string**), `stream`, `stream_options.include_usage`,
+`temperature`, `max_tokens`, `chat_id`, `user` (aceito e ignorado).
+
+> ⚠️ **Campos fora dessa lista são descartados SEM erro** — inclusive
+> `response_format`, `tools`, `tool_choice`, `n` e `logprobs`. A request
+> responde `200` normalmente, mas o campo não teve efeito. Na prática:
+>
+> - `response_format: { type: "json_schema" }` **não força JSON**: o modelo
+>   responde texto livre. Por isso `generateObject`/`streamObject` do AI SDK
+>   (ou `client.beta.chat.completions.parse` do SDK OpenAI) **não funcionam**
+>   nesta rota hoje — podem até funcionar num teste, quando o prompt induz
+>   JSON, e quebrar em produção. Até o suporte sair, se precisar de saída
+>   estruturada, peça o JSON no prompt **e** valide o `content` com o seu
+>   schema (ex.: zod) tratando falha de parse como erro.
+> - `tools` enviadas pelo cliente são ignoradas. As tools que executam são as
+>   do **especialista**, no servidor (modo `assistant:<uuid>`).
+>
+> `content` não-string (array de partes multimodais — `image_url`, `file`)
+> **é recusado** com `400 invalid_request_error`: não há entrada de imagem ou
+> PDF nesta rota. Para usar documentos, extraia o texto no seu app antes de
+> enviar.
 
 ## Resposta
 
 - **`stream: true`** — SSE com chunks `chat.completion.chunk`
   (`choices:[{delta:{content}}]`), `finish_reason` no último chunk e terminador
   `data: [DONE]`. Erros de negócio no meio do stream (ex.: saldo) chegam como
-  chunk de erro antes do `[DONE]`.
+  chunk de erro antes do `[DONE]`. Com `stream_options.include_usage: true`,
+  chega um chunk extra com `choices: []` e o `usage` do turno imediatamente
+  antes do `[DONE]` (contrato OpenAI). Durante fases sem texto, o servidor
+  envia comentários SSE `: ping` a cada 15 s — parsers SSE compatíveis os
+  ignoram.
 - **`stream: false`** — objeto `chat.completion` com
   `choices[0].message.content`.
 
-> **M1**: o campo `usage` do não-stream vem **zerado** (a contabilização de
-> tokens acontece de forma assíncrona no fim do pipeline). O **débito de
-> créditos acontece normalmente** — apenas o eco no JSON é placeholder;
-> confira o consumo em `GET /v1/usage`.
+`finish_reason` reflete o desfecho real do turno: `length` significa que a
+resposta foi truncada pelo `max_tokens` (pode vir com `content` vazio quando o
+limite é pequeno demais) — não trate como resposta final.
+
+`usage` (no não-stream e no chunk de `include_usage`) traz `prompt_tokens`,
+`completion_tokens` e `total_tokens` reais quando o provider os informou; se
+não informou, o campo é **omitido** (nunca vem zerado). O débito de créditos
+acontece de qualquer forma — a fonte de verdade do consumo é
+`GET /v1/usage`.
 
 ## Erros (envelope OpenAI)
 
 | Situação | Status | `code` |
 |---|---|---|
 | Credencial inválida/expirada | 401 | `invalid_api_key` |
+| Body inválido (ex.: `content` não-string, `chat_id` não-UUID) | 400 | `null` (`type: invalid_request_error`) |
 | Modelo/assistant desconhecido ou invisível | 404 | `model_not_found` |
 | Saldo de créditos insuficiente | 429 | `insufficient_quota` |
-| Modelo bloqueado pela allowlist do centro de custo | 403 | `model_blocked` |
+| Modelo bloqueado pela allowlist do centro de custo, ou modelo concreto pedido sem a permissão `chat.models.select` | 403 | `model_blocked` |
 | Rate-limit de app token | 429 | `rate_limit_exceeded` |
 | Usuário sem organização | 403 | `request_forbidden` |
 
@@ -165,6 +196,34 @@ Configure um endpoint "OpenAI compatible" com:
 - **Models**: buscados automaticamente de `GET /models`, ou informe um
   `assistant:<uuid>` manualmente para falar com um especialista.
 
+## Tools MCP do especialista (modo `assistant:`)
+
+Um app pode expor um servidor MCP (Streamable HTTP, Bearer), cadastrá-lo na
+organização e habilitar as tools dele no especialista. Nas chamadas
+`assistant:<uuid>` o especialista executa essas tools **no servidor da
+plataforma** — o cliente OpenAI não recebe `tool_calls`, só o texto final.
+
+A plataforma renomeia cada tool para o namespace global:
+
+```text
+mcp_<servidor>_<tool>
+```
+
+- `<servidor>` é o nome do servidor MCP cadastrado, **sanitizado**: minúsculas,
+  todo caractere fora de `[a-z0-9]` vira `_`, `_` repetidos são colapsados e
+  `_` nas pontas removidos. Ex.: servidor `BIB Normas-Bacen` → `bib_normas_bacen`.
+- `<tool>` é o nome da tool como o seu servidor MCP a declara, sem alteração.
+- Ex.: tool `buscar_norma` no servidor `BIB Normas-Bacen` →
+  `mcp_bib_normas_bacen_buscar_norma`.
+
+Onde isso importa:
+
+- É esse nome completo que fica na allowlist de tools do especialista
+  (`specialist.tools[]`) e que aparece nos logs e na trilha do chat.
+- Se o prompt do especialista cita tools pelo nome, use o nome completo.
+- Renomear o servidor MCP muda o prefixo de todas as tools dele — a allowlist
+  do especialista precisa ser revista.
+
 ## Billing e auditoria
 
 Cada turno emite um evento `usage.recorded` com
@@ -179,12 +238,21 @@ Organizações com **BYO-LLM** (chave própria de provider) têm o turno marcado
 como `usageSource: 'BYO'` e **não** são debitadas em créditos — o custo é pago
 direto ao provider.
 
-## Limitações do M1
+## Limitações conhecidas
 
-1. `usage` zerado no não-stream (billing ocorre; eco no JSON é placeholder).
-2. `assistant:<slug>` não suportado — apenas UUID.
-3. `GET /models` não lista os especialistas da org.
-4. Sem `tools`, `response_format`, `n > 1`, `logprobs` ou conteúdo multimodal.
+1. **Sem RAG no modo `assistant:<uuid>`** — as bases de conhecimento
+   vinculadas ao especialista **não são consultadas** quando a conversa vem
+   por esta rota (a busca de conhecimento fica desligada para todo o prefixo
+   `/v1/openai`). Prompt, skills, conectores e tools MCP funcionam; o RAG só
+   vale no chat da UI do Adaflow. Até isso mudar, se o app depende de
+   documentos, exponha a busca como tool MCP do próprio app.
+2. **Sem saída estruturada** — `response_format` é descartado sem erro (ver
+   [Request](#request-subset-m1)).
+3. **Sem entrada de arquivo/imagem** — `content` multimodal responde `400`.
+4. **Sem `tools` do cliente** — descartadas sem erro; só as tools do
+   especialista executam (server-side). Também sem `n > 1` e `logprobs`.
+5. `assistant:<slug>` não suportado — apenas UUID.
+6. `GET /models` não lista os especialistas da org.
 
 ## Referências de implementação
 
@@ -193,4 +261,5 @@ direto ao provider.
   `apps/api-gateway/src/auth/jwt-auth.guard.ts`, `apps/api-gateway/src/proxy/proxy.service.ts`
 - Chat-service (controller + tradutores): `apps/chat-service/src/infrastructure/http/controllers/openai-compat.controller.ts`,
   `apps/chat-service/src/application/openai-compat/`
-- Testes de regressão: `.claude/skills/regression-test/SKILL.md` — seção 24
+- Nomes de tools MCP: `apps/agents-service/src/domain/mcp/mcp-naming.ts`
+- Testes de regressão: `.claude/skills/regression-chat/SKILL.md`, seção 24

@@ -3,6 +3,10 @@ import { parseSse } from '../sse.js';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
+  /**
+   * Somente texto. A rota ainda não aceita conteúdo multimodal (PDF/imagem) —
+   * um array de partes responde `400 invalid_request_error`.
+   */
   content: string;
 }
 
@@ -10,7 +14,8 @@ export interface ChatParams {
   /**
    * `<gatewayId>` do catálogo (ex.: `anthropic/claude-haiku-4.5`) para chamada
    * genérica, ou `assistant:<uuid>` para conversar com um especialista
-   * (RAG, skills, conectores e governança do especialista valem).
+   * (skills, conectores, tools MCP e governança do especialista valem; RAG
+   * ainda não é aplicado nesta rota).
    */
   model: string;
   messages: ChatMessage[];
@@ -22,6 +27,18 @@ export interface ChatParams {
    * e apenas a mensagem nova.
    */
   chatId?: string;
+  /**
+   * Só no `stream()`: pede o chunk final com `choices: []` e o `usage` do turno
+   * antes do `[DONE]` (`stream_options.include_usage`). Ignorado no `create()`,
+   * que já traz `usage` na resposta.
+   */
+  includeUsage?: boolean;
+}
+
+export interface ChatUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
 }
 
 export interface ChatCompletion {
@@ -30,19 +47,23 @@ export interface ChatCompletion {
   choices: Array<{
     index: number;
     message: { role: string; content: string };
+    /** `length` = truncado por `maxTokens` (o `content` pode vir vazio). */
     finish_reason: string | null;
   }>;
-  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  /** Omitido quando o provider não informou os tokens — nunca vem zerado. */
+  usage?: ChatUsage;
 }
 
 export interface ChatCompletionChunk {
   id: string;
   object: string;
+  /** Vazio no chunk final de `usage` (quando `includeUsage: true`). */
   choices: Array<{
     index: number;
     delta: { role?: string; content?: string };
     finish_reason: string | null;
   }>;
+  usage?: ChatUsage;
 }
 
 export interface ChatResult {
@@ -68,14 +89,21 @@ function toBody(params: ChatParams, stream: boolean): Record<string, unknown> {
     max_tokens: params.maxTokens,
     chat_id: params.chatId,
     stream,
+    stream_options: stream && params.includeUsage ? { include_usage: true } : undefined,
   };
 }
 
-/** Chat via API OpenAI-compatible (`/v1/openai`) — genérico ou especialista. */
+/**
+ * Chat via API OpenAI-compatible (`/v1/openai`) — genérico ou especialista.
+ *
+ * Limitações da rota: sem saída estruturada (`response_format` é descartado
+ * pelo gateway sem erro), sem `tools` do cliente e sem conteúdo multimodal.
+ * No modo `assistant:<uuid>` o RAG das bases do especialista não é aplicado.
+ */
 export class ChatResource {
   constructor(private readonly http: HttpTransport) {}
 
-  /** Completion não-stream. No M1 o campo `usage` vem zerado (billing é assíncrono). */
+  /** Completion não-stream. */
   async create(params: ChatParams): Promise<ChatResult> {
     const res = await this.http.request(CHAT_PATH, {
       method: 'POST',

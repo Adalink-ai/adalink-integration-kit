@@ -82,7 +82,8 @@ const { content } = await client.chat.create({
   messages: [{ role: 'user', content: 'Classifique: "adorei o produto"' }],
 });
 
-// Especialista: assistant:<uuid> — RAG, skills, conectores e governança valem
+// Especialista: assistant:<uuid> — prompt, skills, conectores, tools MCP e
+// governança valem (RAG das bases do especialista ainda NÃO vale por API)
 const result = await client.chat.create({
   model: 'assistant:0198c9a1-...',
   messages: [{ role: 'user', content: 'Resuma o contrato X.' }],
@@ -95,15 +96,29 @@ const followUp = await client.chat.create({
   messages: [{ role: 'user', content: 'E os riscos?' }],
 });
 
-// Streaming
-const stream = await client.chat.stream({ model: 'anthropic/claude-haiku-4.5', messages });
+// Streaming — includeUsage pede o chunk final (choices: []) com o usage do turno
+const stream = await client.chat.stream({
+  model: 'anthropic/claude-haiku-4.5',
+  messages,
+  includeUsage: true,
+});
 for await (const chunk of stream) {
   process.stdout.write(chunk.choices[0]?.delta.content ?? '');
+  if (chunk.usage) console.log(chunk.usage.total_tokens);
 }
 
 // Catálogo de modelos
 const models = await client.chat.models();
 ```
+
+Limitações da rota (detalhes em [OPENAI-COMPAT.md](../../docs/OPENAI-COMPAT.md#limitações-conhecidas)):
+
+- **Sem saída estruturada** — `response_format` é descartado pelo gateway sem
+  erro; não aponte `generateObject`/`streamObject` do AI SDK para o Adaflow.
+  Se precisar de JSON, peça no prompt e valide `content` com o seu schema.
+- **Sem PDF/imagem** — `content` é só texto (array de partes → `400`).
+- **`finish_reason: 'length'`** = resposta truncada por `maxTokens`.
+- **`usage`** vem real ou omitido, nunca zerado.
 
 ## Agentes autônomos
 
@@ -134,9 +149,12 @@ const { fileId } = await client.repositories.uploadDocument(repo.id, {
   data: await readFile('./contrato.pdf'),
 });
 
-// Vincula ao especialista — arquivos passam a compor o RAG
+// Vincula ao especialista — arquivos passam a compor o RAG no chat do Adaflow
 await client.specialists.linkRepository(specialistId, repo.id);
 ```
+
+> O RAG dessas bases vale nas conversas pelo chat do Adaflow; as chamadas
+> `assistant:<uuid>` feitas pelo app ainda não o aplicam.
 
 O processamento (OCR/embedding) é assíncrono após o `confirm`; acompanhe via
 `client.repositories.listFiles(repo.id)`.

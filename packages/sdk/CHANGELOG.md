@@ -1,5 +1,24 @@
 # @adaflow/sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- 79243a5: `chat.stream()` aceita `includeUsage: true` (envia `stream_options.include_usage`)
+  e o `ChatCompletionChunk` passa a tipar o chunk final com `usage` e `choices: []`.
+  Novo tipo exportado `ChatUsage`. A documentação dos tipos de chat foi corrigida
+  para o comportamento real da plataforma: `usage` vem real ou omitido (não mais
+  zerado), `finish_reason: 'length'` indica truncamento, e a rota não suporta
+  saída estruturada, conteúdo multimodal nem RAG no modo `assistant:<uuid>`.
+- 0086696: `createSsoSession`: sessão SSO gerenciada no browser. Encapsula o miolo do
+  handoff que cada app reimplementava à mão — storage do token, `Authorization`
+  automático em `session.fetch`, renovação em 401 e renovação proativa por
+  `exp` — com as proteções anti-loop de redirect aprendidas em produção: guarda
+  de retry por cooldown (nenhuma resposta 200 consegue rearmá-la), 401 amarrado
+  ao token da request (ignora 401 atrasado de token antigo) e single-flight de
+  redirect. Inclui `readJwtExpMs` e os tipos `SsoSession`/`SsoSessionOptions`.
+  O template Next.js e o guia de apps integrados passam a usar o helper.
+
 ## 0.3.2
 
 ### Patch Changes

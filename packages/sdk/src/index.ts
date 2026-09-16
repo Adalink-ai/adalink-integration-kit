@@ -12,6 +12,8 @@ export { DEFAULT_BASE_URL, resolveBaseUrl } from './http.js';
 export { AdaflowApiError } from './errors.js';
 export { buildHandoffUrl, consumeSsoToken } from './sso.js';
 export type { ConsumeSsoTokenOptions } from './sso.js';
+export { createSsoSession, readJwtExpMs } from './sso-session.js';
+export type { SsoSession, SsoSessionOptions } from './sso-session.js';
 export { AdaflowTracker } from './tracker.js';
 export type { TrackerOptions } from './tracker.js';
 export type { AuditEventInput, AuditSeverity } from './tracker-core.js';

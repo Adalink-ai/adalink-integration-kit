@@ -4,14 +4,13 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getJwt, startLogin } from '@/lib/auth';
-
-const noopSubscribe = () => () => {};
+import { session } from '@/lib/auth';
 
 export default function HomePage() {
   const router = useRouter();
-  // Lê o JWT sem setState em effect (e sem mismatch de hidratação).
-  const jwt = useSyncExternalStore(noopSubscribe, getJwt, () => null);
+  // Lê o JWT sem setState em effect (e sem mismatch de hidratação); a UI
+  // reage a login/logout no mesmo documento via session.subscribe.
+  const jwt = useSyncExternalStore(session.subscribe, session.getJwt, () => null);
 
   useEffect(() => {
     if (jwt) router.replace('/chat');
@@ -30,7 +29,7 @@ export default function HomePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={startLogin}>
+          <Button className="w-full" onClick={() => session.login()}>
             Entrar com Adaflow
           </Button>
         </CardContent>

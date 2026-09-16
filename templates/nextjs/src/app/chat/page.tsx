@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { clearJwt, getJwt, markAuthOk, retryLoginOnce } from '@/lib/auth';
+import { session } from '@/lib/auth';
 import { track } from '@/lib/tracking';
 
 interface Message {
@@ -30,7 +30,7 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!getJwt()) router.replace('/');
+    if (!session.getJwt()) router.replace('/');
   }, [router]);
 
   useEffect(() => {
@@ -41,8 +41,7 @@ export default function ChatPage() {
     const text = input.trim();
     if (!text || sending) return;
 
-    const jwt = getJwt();
-    if (!jwt) {
+    if (!session.getJwt()) {
       router.replace('/');
       return;
     }
@@ -54,9 +53,12 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      // session.fetch anexa o Authorization e renova a sessão em 401 sozinho
+      // (com sessão ativa no Adaflow o handoff é transparente — nesse caso a
+      // promise fica pendente enquanto o browser navega).
+      const res = await session.fetch('/api/chat', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${jwt}` },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           // Com chatId, a plataforma guarda o histórico — só a mensagem nova vai.
           messages: chatIdRef.current ? [{ role: 'user', content: text }] : history,
@@ -65,12 +67,10 @@ export default function ChatPage() {
       });
 
       if (res.status === 401) {
+        // A renovação automática já foi tentada e recusada — sessão perdida.
         setMessages(history);
-        if (!retryLoginOnce()) {
-          clearJwt();
-          setNotice('Não foi possível renovar sua sessão — entre novamente.');
-          router.replace('/');
-        }
+        setNotice('Não foi possível renovar sua sessão — entre novamente.');
+        router.replace('/');
         return;
       }
 
@@ -81,7 +81,6 @@ export default function ChatPage() {
         return;
       }
 
-      markAuthOk();
       chatIdRef.current = res.headers.get('x-chat-id') ?? chatIdRef.current;
       // Passo de negócio na trilha de auditoria (módulo Governança do Adaflow)
       track({
@@ -119,7 +118,7 @@ export default function ChatPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              clearJwt();
+              session.logout();
               router.replace('/');
             }}
           >

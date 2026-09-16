@@ -21,35 +21,58 @@ prevalece sobre esta skill.
 
 ## Passos de implementação
 
-1. **Botão/redirect de login**:
+Use `createSsoSession` do `@adaflow/sdk` (>= 0.4) — ele encapsula storage do
+token, `Authorization`, renovação em 401 e as proteções anti-loop de redirect.
+NÃO reimplemente esse miolo à mão; o interceptor manual "401 → refaz handoff"
+já causou loop infinito de redirect em produção (ver armadilhas abaixo).
+
+1. **Sessão** (módulo compartilhado do app):
 
    ```ts
-   const redirectUrl = encodeURIComponent(window.location.origin + '/auth/callback');
-   window.location.href = `https://<adaflow>/sso/handoff?redirect-url=${redirectUrl}`;
+   import { createSsoSession } from '@adaflow/sdk';
+
+   export const session = createSsoSession({
+     adaflowUrl: 'https://<adaflow>',
+     callbackUrl: '/auth/callback', // default
+     onSessionLost: () => {
+       // renovação automática esgotada — mostre a tela de "Entrar".
+       // NÃO redirecione ao handoff daqui: recriaria o loop.
+     },
+   });
    ```
 
-2. **Página de callback** (`/auth/callback` ou equivalente) — extrair o token
-   do fragment, limpar a URL e persistir:
+2. **Botão de login** — `session.login()` redireciona ao handoff.
 
-   ```ts
-   const params = new URLSearchParams(window.location.hash.slice(1));
-   const token = params.get('sso_token');
-   if (token) {
-     sessionStorage.setItem('adaflow:jwt', decodeURIComponent(token));
-     history.replaceState(null, '', window.location.pathname + window.location.search);
-   }
-   ```
+3. **Página de callback** (`/auth/callback`) — `session.completeLogin()`
+   consome o `#sso_token`, salva no `sessionStorage` e limpa a URL do
+   histórico. NUNCA logar o token.
 
-   NUNCA logar o token nem deixá-lo no histórico do browser (o
-   `history.replaceState` é obrigatório).
+4. **Chamadas à API** — `session.fetch(url, init)` anexa o
+   `Authorization: Bearer <jwt>` (produção:
+   `https://adalink-api-gateway.onrender.com`) e trata o 401 sozinho: refaz o
+   handoff com guarda de cooldown, ignora 401 atrasado de token antigo e
+   garante um único redirect por ciclo. Com sessão viva no Adaflow a
+   renovação é transparente (sem digitar senha).
 
-3. **Uso nas chamadas à API** — `Authorization: Bearer <jwt>` no gateway
-   (produção: `https://adalink-api-gateway.onrender.com`).
+5. **UI reativa** (React) —
+   `useSyncExternalStore(session.subscribe, session.getJwt, () => null)`.
 
-4. **Renovação em 401** — interceptor HTTP que, ao receber `401`, refaz o
-   redirect do passo 1. Se a sessão do Adaflow ainda existir, o ciclo é
-   transparente (sem digitar senha). Cuidado com loop: se o handoff voltar e a
-   chamada seguinte ainda der 401, pare e mostre erro de sessão.
+### Armadilhas (se por algum motivo for implementar à mão)
+
+Três erros que causaram loop infinito de redirect em produção, todos
+disparados justamente com sessão viva no Adaflow (a volta do handoff é
+instantânea) e respostas 200/401 misturadas nas chamadas paralelas:
+
+1. Guarda de retry liberada por "alguma chamada deu 200" — cada 200 rearma a
+   guarda e o próximo 401 redireciona de novo. A guarda deve ser POR TEMPO
+   (cooldown, ex.: 60s).
+2. Reagir a 401 de uma request enviada com token que já não é o corrente —
+   derruba a sessão recém-renovada. Amarre o 401 ao token da request.
+3. Vários 401 concorrentes disparando vários redirects — single-flight.
+
+E no servidor do app, se ele valida o JWT perguntando ao gateway: gateway
+inacessível deve responder `503`, nunca `401` — um 401 falso por instabilidade
+derruba a sessão do usuário e alimenta o loop.
 
 ## Regras
 

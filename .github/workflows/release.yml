@@ -41,3 +41,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # O setup-node (registry-url) aponta o npm para um .npmrc proprio
+          # (NPM_CONFIG_USERCONFIG) que le o token de NODE_AUTH_TOKEN. Sem esta
+          # linha o publish sai com o placeholder XXXXX e o registry responde
+          # E404; o ~/.npmrc que o changesets grava com NPM_TOKEN nao e lido.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

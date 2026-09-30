@@ -5,7 +5,7 @@
 Trilha e acesso do lado servidor, para o admin do Adaflow saber quem acessou o
 app e que trilha a pessoa fez:
 
-- `createJwtVerifier`: verifica o JWT do Adaflow pelo JWKS com EdDSA fixo
+- `createJwtVerifier`: verifica o JWT do Adaflow pelo JWKS (default `<baseUrl>/v1/auth/jwks`) com EdDSA fixo
   (contra confusão de algoritmo), `exp`/`nbf` com folga, `iss`/`aud` opcionais,
   cache do JWKS e nova busca em rotação de chave com cooldown. Erros tipados em
   `AdaflowTokenError.code`. Sem dependência: usa WebCrypto.

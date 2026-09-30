@@ -16,7 +16,7 @@ describe('resolveBaseUrl', () => {
     expect(resolveBaseUrl()).toBe('https://api.cliente-privatelabel.com');
   });
 
-  it('sem nada, usa o default de produção', () => {
+  it('sem nada, usa o default (Render)', () => {
     expect(resolveBaseUrl()).toBe(DEFAULT_BASE_URL);
   });
 

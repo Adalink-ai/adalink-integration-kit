@@ -18,7 +18,7 @@ export interface AdaflowClientOptions {
   appToken?: TokenProvider;
   /**
    * Base URL do API Gateway. Resolução: valor explícito → env
-   * `ADAFLOW_BASE_URL` → default de produção. Clientes private label com API
+   * `ADAFLOW_BASE_URL` → default (Render, homolog). Clientes private label com API
    * customizada só precisam setar a env — sem mudança de código.
    */
   baseUrl?: string;
@@ -35,7 +35,7 @@ function envVar(name: string): string | undefined {
   return value && value.trim().length > 0 ? value : undefined;
 }
 
-/** Base URL efetiva: explícita → env ADAFLOW_BASE_URL → default de produção. */
+/** Base URL efetiva: explícita → env ADAFLOW_BASE_URL → default (Render, homolog). */
 export function resolveBaseUrl(explicit?: string): string {
   return (explicit ?? envVar('ADAFLOW_BASE_URL') ?? DEFAULT_BASE_URL).replace(/\/$/, '');
 }

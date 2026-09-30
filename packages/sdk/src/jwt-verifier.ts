@@ -58,7 +58,7 @@ export class AdaflowTokenError extends Error {
 export interface JwtVerifierOptions {
   /**
    * URL do JWKS. Default: `<baseUrl>/v1/auth/jwks`, com o `baseUrl` resolvido
-   * como no client (explícito → env `ADAFLOW_BASE_URL` → produção). Informe
+   * como no client (explícito → env `ADAFLOW_BASE_URL` → default da Render). Informe
    * só quando o JWKS não estiver no gateway (ex.: env `ADAFLOW_JWKS_URL`).
    */
   jwksUrl?: string;

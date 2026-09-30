@@ -45,6 +45,39 @@ permitindo `new AdaflowClient()` sem argumentos em integrações server-to-serve
 const client = new AdaflowClient(); // pronto — private label, sem usuário logado
 ```
 
+### Host que já autentica (`authFetch`)
+
+Quando o app já tem um `fetch` que injeta o Bearer e renova em 401 (ex.: sessão
+por cookie servida no mesmo host do Adaflow), passe-o em `authFetch`. O SDK não
+envia credencial própria, então não combine com `jwt` nem `appToken`. Uploads
+para URLs pré-assinadas seguem no `fetch` comum, para o Bearer não ir ao storage.
+
+```ts
+const client = new AdaflowClient({
+  authFetch: auth.fetch, // renova e repete em 401 por conta própria
+  baseUrl: '',           // mesma origem (browser); também aceita '/api'
+  client: 'ada-one',     // header x-ada-client: atribuição de uso no gateway
+});
+```
+
+### Timeout, cancelamento e retry
+
+```ts
+const client = new AdaflowClient({
+  jwt,
+  timeoutMs: 30_000,              // até a resposta chegar; sem default
+  retry: { retries: 2, baseMs: 300 }, // default; `false` desliga
+});
+
+// Por chamada: cancela com o signal (ex.: TanStack Query) e sobrepõe o prazo.
+await client.agents.list({ limit: 20 }, { signal, timeoutMs: 5_000 });
+```
+
+- O prazo vale até os headers chegarem. Em stream, o corpo segue enquanto durar
+  e só o `signal` do chamador o interrompe.
+- O retry só vale para **GET**, em erro de rede e 502/503/504 (respeita
+  `Retry-After`). 401 nunca é repetido: quem renova é a credencial.
+
 ## SSO handoff (browser)
 
 O Adaflow é o Identity Provider. O app redireciona para o handoff e recebe o

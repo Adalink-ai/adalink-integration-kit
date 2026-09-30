@@ -192,6 +192,64 @@ const page = await client.governance.listLogs({ sourceService: 'app:meu-app' });
 Nunca coloque PII/segredos em `metadata` (cap 4KB). No browser, aponte o
 `baseUrl` para um proxy do seu app (ver template NextJS) — sem CORS.
 
+### Lado servidor: verificar o SSO e registrar o acesso
+
+O admin do Adaflow precisa saber **quem acessou o app** e **que trilha a pessoa
+fez**. O SSO já registra o login do lado do Adaflow; o app registra o acesso a
+ele mesmo e os momentos de negócio, sempre assinados com o JWT da pessoa (a
+plataforma tira o autor da credencial, nunca do payload).
+
+```ts
+import { createJwtVerifier, recordAppAccess, AdaflowTokenError } from '@adaflow/sdk';
+
+// Um por processo: guarda o JWKS em cache e só busca de novo em rotação de chave.
+const verifier = createJwtVerifier({
+  jwksUrl: process.env.ADAFLOW_JWKS_URL!,
+  issuer: process.env.ADAFLOW_JWT_ISSUER, // opcional
+});
+
+// No callback do SSO (servidor), com o token recebido do handoff:
+try {
+  const identity = await verifier.verify(token); // EdDSA fixo; exp/nbf/iss/aud
+  const user = await findLocalUser(identity.email);
+  await recordAppAccess(
+    { token, identity, app: 'meu-app', outcome: user ? 'granted' : 'denied', reason: user ? undefined : 'sem_cadastro' },
+    { baseUrl: process.env.ADAFLOW_GATEWAY_URL },
+  ); // nunca lança: falha na trilha não impede o login
+} catch (err) {
+  if (err instanceof AdaflowTokenError) return deny(err.code); // expired, invalid_signature...
+  throw err;
+}
+```
+
+A identidade prova quem é a pessoa; a permissão continua local no app. O acesso
+entra na Governança como `app.acesso.login` (ou `app.acesso.negado`), categoria
+`acesso`, idempotente por sessão do Adaflow: reenviar o mesmo callback não
+duplica o registro.
+
+### Catálogo de eventos
+
+Declare os momentos de negócio num lugar só. A validação roda na definição (um
+evento fora do contrato quebra no boot, não como 400 em produção), e o
+`eventId` é um UUID v5 determinístico: cron que repete ou webhook duplicado
+viram `duplicated`, não uma segunda linha.
+
+```ts
+import { defineAuditEvents } from '@adaflow/sdk';
+
+export const events = defineAuditEvents('meu-app', {
+  quoteApproved: { action: 'app.cotacao.aprovada', label: 'Cotação aprovada', resource: 'Cotacao' },
+  quoteDeleted: { action: 'app.cotacao.removida', label: 'Cotação removida', resource: 'Cotacao', severity: 'warning' },
+});
+
+await client.governance.track(
+  await events.build('quoteApproved', { subjectId: quote.id }),
+  { app: 'meu-app' },
+);
+// Repetição legítima do mesmo momento: passe `occurrence` para não deduplicar.
+await events.build('quoteDeleted', { subjectId: quote.id, occurrence: String(version) });
+```
+
 ## Tratamento de erros
 
 Toda resposta não-2xx vira `AdaflowApiError`, normalizando os dois envelopes

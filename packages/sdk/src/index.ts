@@ -14,6 +14,29 @@ export { buildHandoffUrl, consumeSsoToken } from './sso.js';
 export type { ConsumeSsoTokenOptions } from './sso.js';
 export { createSsoSession, readJwtExpMs } from './sso-session.js';
 export type { SsoSession, SsoSessionOptions } from './sso-session.js';
+export { createJwtVerifier, AdaflowTokenError } from './jwt-verifier.js';
+export type {
+  AdaflowIdentity,
+  AdaflowTokenErrorCode,
+  JwtVerifier,
+  JwtVerifierOptions,
+} from './jwt-verifier.js';
+export {
+  ACCESS_EVENTS,
+  AUDIT_EVENT_NAMESPACE,
+  buildAccessEvent,
+  defineAuditEvents,
+  recordAppAccess,
+  uuidV5,
+} from './audit-catalog.js';
+export type {
+  AccessOutcome,
+  AppAccessInput,
+  AppAccessResult,
+  AuditCatalog,
+  AuditEventSpec,
+  BuildAuditEventInput,
+} from './audit-catalog.js';
 export { AdaflowTracker } from './tracker.js';
 export type { TrackerOptions } from './tracker.js';
 export type { AuditEventInput, AuditSeverity } from './tracker-core.js';

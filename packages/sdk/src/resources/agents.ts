@@ -1,4 +1,4 @@
-import type { HttpTransport } from '../http.js';
+import type { CallOptions, HttpTransport } from '../http.js';
 import { parseSse } from '../sse.js';
 
 export interface AutonomousAgent {
@@ -40,25 +40,30 @@ const BASE = '/v1/autonomous-agents';
 export class AgentsResource {
   constructor(private readonly http: HttpTransport) {}
 
-  async list(query?: { page?: number; limit?: number; search?: string }): Promise<Paginated<AutonomousAgent>> {
-    return this.http.requestJson<Paginated<AutonomousAgent>>(BASE, { query });
+  async list(
+    query?: { page?: number; limit?: number; search?: string },
+    options?: CallOptions,
+  ): Promise<Paginated<AutonomousAgent>> {
+    return this.http.requestJson<Paginated<AutonomousAgent>>(BASE, { ...options, query });
   }
 
-  async get(agentId: string): Promise<AutonomousAgent> {
-    return this.http.requestJson<AutonomousAgent>(`${BASE}/${agentId}`);
+  async get(agentId: string, options?: CallOptions): Promise<AutonomousAgent> {
+    return this.http.requestJson<AutonomousAgent>(`${BASE}/${agentId}`, options);
   }
 
   /** Execução síncrona — responde ao final. */
-  async execute(agentId: string, params: ExecuteAgentParams): Promise<AgentExecution> {
+  async execute(agentId: string, params: ExecuteAgentParams, options?: CallOptions): Promise<AgentExecution> {
     return this.http.requestJson<AgentExecution>(`${BASE}/${agentId}/execute`, {
+      ...options,
       method: 'POST',
       body: params,
     });
   }
 
   /** Execução com streaming SSE — itere os chunks (JSON) conforme chegam. */
-  async *stream(agentId: string, params: ExecuteAgentParams): AsyncGenerator<unknown> {
+  async *stream(agentId: string, params: ExecuteAgentParams, options?: CallOptions): AsyncGenerator<unknown> {
     const res = await this.http.request(`${BASE}/${agentId}/stream`, {
+      ...options,
       query: { input: params.input, threadId: params.threadId },
       stream: true,
     });

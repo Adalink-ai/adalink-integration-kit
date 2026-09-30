@@ -7,7 +7,7 @@ import { RepositoriesResource } from './resources/repositories.js';
 import { SpecialistsResource } from './resources/specialists.js';
 import { TelemetryResource } from './resources/telemetry.js';
 
-export type { AdaflowClientOptions, TokenProvider } from './http.js';
+export type { AdaflowClientOptions, CallOptions, RetryOptions, TokenProvider } from './http.js';
 export { DEFAULT_BASE_URL, resolveBaseUrl } from './http.js';
 export { AdaflowApiError } from './errors.js';
 export { buildHandoffUrl, consumeSsoToken } from './sso.js';

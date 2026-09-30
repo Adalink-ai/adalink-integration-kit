@@ -1,4 +1,4 @@
-import type { HttpTransport } from '../http.js';
+import type { CallOptions, HttpTransport } from '../http.js';
 import { parseSse } from '../sse.js';
 
 export interface ChatMessage {
@@ -104,8 +104,9 @@ export class ChatResource {
   constructor(private readonly http: HttpTransport) {}
 
   /** Completion não-stream. */
-  async create(params: ChatParams): Promise<ChatResult> {
+  async create(params: ChatParams, options?: CallOptions): Promise<ChatResult> {
     const res = await this.http.request(CHAT_PATH, {
+      ...options,
       method: 'POST',
       body: toBody(params, false),
     });
@@ -118,8 +119,9 @@ export class ChatResource {
   }
 
   /** Completion em streaming — itere os chunks; termina no `[DONE]`. */
-  async stream(params: ChatParams): Promise<ChatStream> {
+  async stream(params: ChatParams, options?: CallOptions): Promise<ChatStream> {
     const res = await this.http.request(CHAT_PATH, {
+      ...options,
       method: 'POST',
       body: toBody(params, true),
       stream: true,
@@ -139,9 +141,10 @@ export class ChatResource {
   }
 
   /** Modelos do catálogo curado, no shape OpenAI. */
-  async models(): Promise<Array<{ id: string; object: string; owned_by: string }>> {
+  async models(options?: CallOptions): Promise<Array<{ id: string; object: string; owned_by: string }>> {
     const body = await this.http.requestJson<{ data: Array<{ id: string; object: string; owned_by: string }> }>(
       '/v1/openai/models',
+      options,
     );
     return body.data;
   }

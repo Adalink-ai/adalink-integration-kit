@@ -203,8 +203,9 @@ plataforma tira o autor da credencial, nunca do payload).
 import { createJwtVerifier, recordAppAccess, AdaflowTokenError } from '@adaflow/sdk';
 
 // Um por processo: guarda o JWKS em cache e só busca de novo em rotação de chave.
+// O JWKS sai do baseUrl (<gateway>/v1/auth/jwks); ADAFLOW_BASE_URL também vale.
 const verifier = createJwtVerifier({
-  jwksUrl: process.env.ADAFLOW_JWKS_URL!,
+  baseUrl: process.env.ADAFLOW_GATEWAY_URL,
   issuer: process.env.ADAFLOW_JWT_ISSUER, // opcional
 });
 
@@ -221,6 +222,18 @@ try {
   throw err;
 }
 ```
+
+O padrão de URL é o mesmo em todos os ambientes; só o host muda:
+
+| Ambiente | Gateway (`baseUrl`) | JWKS |
+|---|---|---|
+| Homolog (Render; default atual do SDK) | `https://adalink-api-gateway.onrender.com` | `<gateway>/v1/auth/jwks` |
+| Cirion | `https://adaflow.adalink.ai` | `<gateway>/v1/auth/jwks` |
+
+O handoff do SSO fica no front do Adaflow, em `<front>/sso/handoff` (ex.:
+`https://adaflow-meet.adalink.ai/sso/handoff`); use `buildHandoffUrl(front, redirect)`.
+
+`jwksUrl` explícito só é preciso se o JWKS não estiver no gateway.
 
 A identidade prova quem é a pessoa; a permissão continua local no app. O acesso
 entra na Governança como `app.acesso.login` (ou `app.acesso.negado`), categoria

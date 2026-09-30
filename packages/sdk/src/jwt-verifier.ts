@@ -10,6 +10,11 @@
  * Node ≥ 18.17 e em runtimes edge.
  */
 
+import { resolveBaseUrl } from './http.js';
+
+/** Caminho do JWKS no gateway do Adaflow (igual em todos os ambientes). */
+export const JWKS_PATH = '/v1/auth/jwks';
+
 /** Identidade extraída de um JWT válido do Adaflow. */
 export interface AdaflowIdentity {
   /** Id do usuário na plataforma. */
@@ -51,8 +56,14 @@ export class AdaflowTokenError extends Error {
 }
 
 export interface JwtVerifierOptions {
-  /** URL do JWKS do Adaflow (ex.: env `ADAFLOW_JWKS_URL`). Obrigatória. */
-  jwksUrl: string;
+  /**
+   * URL do JWKS. Default: `<baseUrl>/v1/auth/jwks`, com o `baseUrl` resolvido
+   * como no client (explícito → env `ADAFLOW_BASE_URL` → produção). Informe
+   * só quando o JWKS não estiver no gateway (ex.: env `ADAFLOW_JWKS_URL`).
+   */
+  jwksUrl?: string;
+  /** Base do gateway do ambiente (ex.: `https://adaflow.adalink.ai`). */
+  baseUrl?: string;
   /** Issuer esperado (`iss`). Sem ele, o issuer não é conferido. */
   issuer?: string;
   /** Audience esperada (`aud`). Sem ela, a audience não é conferida. */
@@ -117,10 +128,19 @@ export interface JwtVerifier {
   verify(token: string): Promise<AdaflowIdentity>;
 }
 
-export function createJwtVerifier(options: JwtVerifierOptions): JwtVerifier {
-  if (!options.jwksUrl) {
-    throw new Error('createJwtVerifier: informe jwksUrl (ex.: env ADAFLOW_JWKS_URL).');
+/** URL efetiva do JWKS: explícita → `<baseUrl resolvido>/v1/auth/jwks`. */
+export function resolveJwksUrl(options: Pick<JwtVerifierOptions, 'jwksUrl' | 'baseUrl'> = {}): string {
+  if (options.jwksUrl) return options.jwksUrl;
+  const base = resolveBaseUrl(options.baseUrl);
+  if (!/^https?:\/\//.test(base)) {
+    // O verificador roda no servidor: base relativa (mesma origem) não serve.
+    throw new Error('createJwtVerifier: baseUrl precisa ser absoluta, ou informe jwksUrl.');
   }
+  return base + JWKS_PATH;
+}
+
+export function createJwtVerifier(options: JwtVerifierOptions = {}): JwtVerifier {
+  const jwksUrl = resolveJwksUrl(options);
   const cacheTtlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
   const cooldownMs = options.refetchCooldownMs ?? DEFAULT_REFETCH_COOLDOWN_MS;
   const toleranceSec = options.clockToleranceSec ?? DEFAULT_CLOCK_TOLERANCE_SEC;
@@ -134,7 +154,7 @@ export function createJwtVerifier(options: JwtVerifierOptions): JwtVerifier {
   async function loadJwks(): Promise<void> {
     let res: Response;
     try {
-      res = await fetchImpl(options.jwksUrl, { headers: { accept: 'application/json' } });
+      res = await fetchImpl(jwksUrl, { headers: { accept: 'application/json' } });
     } catch {
       throw new AdaflowTokenError('jwks_unavailable', 'JWKS do Adaflow indisponível.');
     }

@@ -14,7 +14,7 @@ export { buildHandoffUrl, consumeSsoToken } from './sso.js';
 export type { ConsumeSsoTokenOptions } from './sso.js';
 export { createSsoSession, readJwtExpMs } from './sso-session.js';
 export type { SsoSession, SsoSessionOptions } from './sso-session.js';
-export { createJwtVerifier, AdaflowTokenError } from './jwt-verifier.js';
+export { AdaflowTokenError, createJwtVerifier, JWKS_PATH, resolveJwksUrl } from './jwt-verifier.js';
 export type {
   AdaflowIdentity,
   AdaflowTokenErrorCode,

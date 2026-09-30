@@ -1,5 +1,10 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { AdaflowTokenError, createJwtVerifier } from './jwt-verifier.js';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_BASE_URL } from './http.js';
+import { AdaflowTokenError, createJwtVerifier, resolveJwksUrl } from './jwt-verifier.js';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const JWKS_URL = 'https://adaflow.example.com/v1/auth/jwks';
 const NOW = Date.UTC(2026, 8, 30, 12, 0, 0);
@@ -74,8 +79,26 @@ describe('createJwtVerifier', () => {
     expect(identity.issuedAt?.getTime()).toBe((nowSec - 60) * 1000);
   });
 
-  it('exige jwksUrl', () => {
-    expect(() => createJwtVerifier({ jwksUrl: '' })).toThrow(/jwksUrl/);
+  it('deriva o JWKS do baseUrl, da env ou do default', () => {
+    expect(resolveJwksUrl({ baseUrl: 'https://adaflow.adalink.ai/' })).toBe('https://adaflow.adalink.ai/v1/auth/jwks');
+    expect(resolveJwksUrl()).toBe(`${DEFAULT_BASE_URL}/v1/auth/jwks`);
+    vi.stubEnv('ADAFLOW_BASE_URL', 'https://gw.cliente.com');
+    expect(resolveJwksUrl()).toBe('https://gw.cliente.com/v1/auth/jwks');
+    expect(resolveJwksUrl({ jwksUrl: 'https://outro/jwks', baseUrl: 'https://x' })).toBe('https://outro/jwks');
+  });
+
+  it('recusa base relativa sem jwksUrl', () => {
+    expect(() => createJwtVerifier({ baseUrl: '' })).toThrow(/absoluta/);
+  });
+
+  it('busca o JWKS na URL derivada do baseUrl', async () => {
+    const fetchMock = jwksFetch();
+    await createJwtVerifier({
+      baseUrl: 'https://adaflow.adalink.ai',
+      fetch: fetchMock as unknown as typeof fetch,
+      now: () => NOW,
+    }).verify(await sign(claims()));
+    expect((fetchMock.mock.calls[0] as unknown[])[0]).toBe('https://adaflow.adalink.ai/v1/auth/jwks');
   });
 
   it('recusa algoritmo diferente de EdDSA (confusão de algoritmo)', async () => {

@@ -1,5 +1,13 @@
 # adaflow-template-nextjs
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [4cef50d]
+- Updated dependencies [0a010d7]
+  - @adaflow/sdk@0.5.0
+
 ## 0.1.5
 
 ### Patch Changes

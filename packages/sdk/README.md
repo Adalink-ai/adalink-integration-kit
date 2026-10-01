@@ -192,6 +192,41 @@ await client.specialists.linkRepository(specialistId, repo.id);
 O processamento (OCR/embedding) é assíncrono após o `confirm`; acompanhe via
 `client.repositories.listFiles(repo.id)`.
 
+## Documentos
+
+Upload, consulta e processamento de documentos de um **Espaço** (`spaceId`). O
+espaço é o contêiner onde o trabalho acontece; a plataforma ainda o chama de
+projeto, e o SDK traduz o nome nos dois sentidos.
+
+```ts
+// Upload completo: presign → PUT direto no storage → confirm.
+const doc = await client.documents.upload({
+  spaceId,
+  fileName: 'contrato.pdf',
+  contentType: 'application/pdf',
+  data: arquivo, // Blob, ArrayBuffer ou Uint8Array; até 500 MB
+});
+
+// Extração e indexação são assíncronas e não têm stream: o helper consulta.
+const pronto = await client.documents.waitUntilProcessed(doc.id);
+if (pronto.extractionStatus === 'FAILED') console.warn(pronto.errorCode, pronto.errorMessage);
+
+const docs = await client.documents.list({ spaceId, status: 'COMPLETED', limit: 50 });
+const thumb = await client.documents.thumbnail(doc.id); // null enquanto não há frame
+const media = await client.documents.mediaContent(doc.id); // transcrição e frames (áudio e vídeo)
+await client.documents.delete(doc.id); // definitivo
+```
+
+- O PUT envia o `Content-Type` que a plataforma assinou (não o informado);
+  divergir dá 403 no storage. O `upload` já cuida disso, e o PUT usa o `fetch`
+  comum, sem o Bearer.
+- `skipIndexing: true` guarda o arquivo só como anexo.
+- Também: `presign`/`confirm` separados, `importFromProvider` (Drive, OneDrive),
+  `reprocess`, `reindex` e `pages` (imagens das páginas).
+- Permissões: leitura `knowledge.documents.read.*`, upload
+  `knowledge.documents.upload` (flag `knowledge.creation`), exclusão
+  `knowledge.documents.delete.*`. Upload num espaço pede papel EDITOR ou acima.
+
 ## Governança / Trilha de Auditoria
 
 Registre os passos do usuário logado — eles aparecem no módulo Governança do

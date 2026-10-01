@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "adaflow",
+  "displayName": "Adaflow",
+  "version": "0.1.0",
+  "description": "Integração com a plataforma Adaflow (Adalink): skills para implementar SSO, especialistas, agentes autônomos, chat OpenAI-compatible, repositórios de conhecimento e governança em apps parceiros, e um servidor MCP que dá ao Claude acesso direto à sua organização no Adaflow.",
+  "author": {
+    "name": "Adalink AI",
+    "url": "https://github.com/Adalink-ai"
+  },
+  "homepage": "https://github.com/Adalink-ai/adalink-integration-kit",
+  "repository": "https://github.com/Adalink-ai/adalink-integration-kit",
+  "license": "MIT",
+  "keywords": ["adaflow", "adalink", "sso", "agents", "rag", "governance", "mcp"],
+  "userConfig": {
+    "app_token": {
+      "type": "string",
+      "title": "Adaflow app token",
+      "description": "App token server-to-server (enviado como x-ada-token). Deixe vazio para usar ADAFLOW_JWT ou ADAFLOW_APP_TOKEN do ambiente.",
+      "sensitive": true
+    },
+    "base_url": {
+      "type": "string",
+      "title": "API Gateway (opcional)",
+      "description": "Base URL do API Gateway para clientes private label. Vazio = produção.",
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "adaflow": {
+      "command": "npx",
+      "args": ["-y", "@adaflow/mcp@^0.1.0"],
+      "env": {
+        "ADAFLOW_APP_TOKEN": "${user_config.app_token}",
+        "ADAFLOW_BASE_URL": "${user_config.base_url}",
+        "ADAFLOW_JWT": "${ADAFLOW_JWT:-}",
+        "ADA_TOKEN": "${ADAFLOW_APP_TOKEN:-}",
+        "ADAFLOW_CLIENT": "claude-plugin"
+      }
+    }
+  }
+}

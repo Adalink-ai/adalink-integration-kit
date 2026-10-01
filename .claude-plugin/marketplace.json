@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "adalink",
+  "owner": {
+    "name": "Adalink AI",
+    "url": "https://github.com/Adalink-ai"
+  },
+  "metadata": {
+    "description": "Plugins oficiais da Adalink para integrar apps e agentes à plataforma Adaflow."
+  },
+  "plugins": [
+    {
+      "name": "adaflow",
+      "source": "./",
+      "description": "Skills de integração com o Adaflow + servidor MCP com especialistas, agentes, chat, repositórios, governança e billing.",
+      "category": "development"
+    }
+  ]
+}

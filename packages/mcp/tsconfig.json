@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@adaflow/sdk": [
+        "../sdk/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "vitest.config.ts"
+  ]
+}

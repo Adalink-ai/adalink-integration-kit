@@ -1,9 +1,36 @@
 # Adalink Integration Kit
 
 Kit oficial para integrar apps parceiros e de clientes ao Adaflow, a
-plataforma de IA da Adalink: documentação, skills de agente (Claude Code),
-SDK TypeScript (`@adaflow/sdk`), CLI de scaffold (`create-adaflow-app`) e
-template NextJS pronto para produção.
+plataforma de IA da Adalink: documentação, plugin do Claude Code, skills de
+agente, SDK TypeScript (`@adaflow/sdk`), servidor MCP (`@adaflow/mcp`), CLI de
+scaffold (`create-adaflow-app`) e template NextJS pronto para produção.
+
+## Plugin do Claude Code
+
+O jeito mais rápido de usar o kit: um plugin que traz as skills de integração,
+comandos e o servidor MCP do Adaflow.
+
+```bash
+# dentro do Claude Code
+/plugin marketplace add Adalink-ai/adalink-integration-kit
+/plugin install adaflow@adalink
+```
+
+Na instalação, o Claude Code pede o app token do Adaflow (guardado como
+credencial sensível). O plugin entrega:
+
+| Componente | O que faz |
+|---|---|
+| Skills (`skills/`) | As seis skills de integração abaixo, ativadas automaticamente pelo contexto do pedido |
+| `/adaflow:new-app <nome>` | Cria um app a partir do template NextJS via `create-adaflow-app` |
+| `/adaflow:integrate <superfície>` | Implementa `sso`, `assistants`, `agent`, `chat`, `knowledge` ou `governance` no app atual |
+| `/adaflow:doctor` | Valida credencial, gateway, acesso a especialistas/agentes e saldo |
+| MCP `adaflow` | Tools para conversar com especialistas, executar agentes, subir documentos, consultar governança e billing ([`@adaflow/mcp`](./packages/mcp/README.md)) |
+
+Credenciais do MCP: o app token configurado no plugin, ou `ADAFLOW_JWT` /
+`ADAFLOW_APP_TOKEN` exportados no ambiente (o JWT de usuário tem
+precedência). Manifestos em [`.claude-plugin/`](./.claude-plugin); valide
+mudanças com `claude plugin validate .`.
 
 ## O que tem aqui
 
@@ -13,6 +40,8 @@ template NextJS pronto para produção.
 | [`skills/`](./skills) | Skills de Claude Code prontas para copiar para o repositório do seu app |
 | [`packages/sdk`](./packages/sdk) | [`@adaflow/sdk`](./packages/sdk/README.md) — SDK TypeScript com client tipado (SSO, chat, especialistas, agentes, repositórios, billing) |
 | [`packages/create-adaflow-app`](./packages/create-adaflow-app) | [`create-adaflow-app`](./packages/create-adaflow-app/README.md) — CLI que cria um app integrado a partir dos templates |
+| [`packages/mcp`](./packages/mcp) | [`@adaflow/mcp`](./packages/mcp/README.md) — servidor MCP (stdio) sobre o SDK, usado pelo plugin do Claude Code |
+| [`.claude-plugin/`](./.claude-plugin) + [`commands/`](./commands) | Manifesto do plugin `adaflow`, marketplace `adalink` e comandos `/adaflow:*` |
 | [`packages/cli`](./packages/cli) | [`@adaflow/cli`](./packages/cli/README.md) — binário `adaflow`; instala e atualiza as skills nos projetos (`adaflow skills add\|update\|list`) |
 | [`templates/nextjs`](./templates/nextjs) | Starter NextJS + Tailwind 4 + shadcn/ui + Prisma com SSO handoff e chat com IA prontos — via [`create-adaflow-app`](#templates) |
 
@@ -31,6 +60,11 @@ integração no seu app, com passos, snippets e checklist de validação:
 | [`adaflow-governance`](./skills/adaflow-governance/SKILL.md) | Trilha de auditoria: eventos de negócio + sessão no módulo Governança |
 
 ### Instalação das skills no seu projeto
+
+> Usa Claude Code? Prefira o [plugin](#plugin-do-claude-code): ele traz as
+> mesmas skills, sempre atualizadas pelo marketplace. A CLI abaixo continua
+> sendo o caminho para copiar as skills para dentro do repositório (versionadas
+> e customizáveis por projeto) ou para outros agentes.
 
 ```bash
 # na raiz do repositório do seu app
@@ -86,6 +120,8 @@ cd meu-app && git init && pnpm install
 - [x] `templates/nextjs` — starter NextJS (Tailwind 4, shadcn/ui, Prisma) com SSO handoff e chat com IA
 - [x] Publicar `@adaflow/sdk` e `create-adaflow-app` no registry npm (0.1.0, 2026-07-20)
 - [x] `packages/cli` — `@adaflow/cli` (binário `adaflow`) com `skills add|update|list`
+- [x] Plugin do Claude Code (`adaflow@adalink`) + `packages/mcp` (`@adaflow/mcp`)
+- [ ] MCP remoto (HTTP + OAuth/SSO) hospedado, para uso como conector no Claude web/mobile
 
 ## Desenvolvimento
 
@@ -109,4 +145,6 @@ Publicação no npm é automatizada via [Changesets](https://github.com/changese
 3. **Merge do PR de versão = publish automático** no npm dos pacotes alterados.
 
 PR sem changeset não gera release — mudanças em docs, skills e templates não
-precisam de changeset. A CI de PRs (`ci.yml`) roda typecheck + test + build.
+precisam de changeset. Mudanças no plugin (`.claude-plugin/`, `commands/`)
+também não, mas suba o `version` em `.claude-plugin/plugin.json`: ele fixa a
+versão instalada até ser alterado. A CI de PRs (`ci.yml`) roda typecheck + test + build.

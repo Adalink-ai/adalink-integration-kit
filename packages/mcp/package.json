@@ -1,6 +1,6 @@
 {
   "name": "@adaflow/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Servidor MCP oficial da plataforma Adaflow — expõe especialistas, agentes autônomos, chat, repositórios de conhecimento, governança e billing como tools para Claude e outros clientes MCP",
   "repository": {
     "type": "git",

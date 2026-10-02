@@ -2,6 +2,7 @@ import { HttpTransport, type AdaflowClientOptions } from './http.js';
 import { AgentsResource } from './resources/agents.js';
 import { BillingResource } from './resources/billing.js';
 import { ChatResource } from './resources/chat.js';
+import { DocumentsResource } from './resources/documents.js';
 import { GovernanceResource } from './resources/governance.js';
 import { RepositoriesResource } from './resources/repositories.js';
 import { SpecialistsResource } from './resources/specialists.js';
@@ -68,6 +69,26 @@ export type {
   Paginated,
 } from './resources/agents.js';
 export type { Specialist } from './resources/specialists.js';
+export { isDocumentSettled, MAX_DOCUMENT_UPLOAD_BYTES } from './resources/documents.js';
+export type {
+  AdaflowDocument,
+  ConfirmDocumentParams,
+  DocumentMediaContent,
+  DocumentPageImage,
+  DocumentThumbnail,
+  ExtractionMethod,
+  ExtractionStatus,
+  ImportFromProviderParams,
+  ImportFromProviderResult,
+  IndexingStatus,
+  ListDocumentsQuery,
+  MediaFrame,
+  PresignDocumentParams,
+  PresignedDocumentUpload,
+  TranscriptUtterance,
+  UploadDocumentFileParams,
+  WaitForDocumentOptions,
+} from './resources/documents.js';
 export type {
   CreateRepositoryParams,
   Repository,
@@ -99,6 +120,7 @@ export class AdaflowClient {
   readonly agents: AgentsResource;
   readonly specialists: SpecialistsResource;
   readonly repositories: RepositoriesResource;
+  readonly documents: DocumentsResource;
   readonly billing: BillingResource;
   readonly governance: GovernanceResource;
   readonly telemetry: TelemetryResource;
@@ -111,6 +133,7 @@ export class AdaflowClient {
     this.agents = new AgentsResource(http);
     this.specialists = new SpecialistsResource(http);
     this.repositories = new RepositoriesResource(http, fetchImpl);
+    this.documents = new DocumentsResource(http, fetchImpl);
     this.billing = new BillingResource(http);
     this.governance = new GovernanceResource(http);
     this.telemetry = new TelemetryResource(http);

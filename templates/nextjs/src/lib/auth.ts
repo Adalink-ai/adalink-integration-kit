@@ -9,7 +9,7 @@
  */
 import { createSsoSession } from '@adaflow/sdk';
 
-export const ADAFLOW_URL = process.env.NEXT_PUBLIC_ADAFLOW_URL ?? 'https://app.adalink.ai';
+export const ADAFLOW_URL = process.env.NEXT_PUBLIC_ADAFLOW_URL ?? 'https://adaflow.adalink.ai';
 
 export const session = createSsoSession({ adaflowUrl: ADAFLOW_URL });
 

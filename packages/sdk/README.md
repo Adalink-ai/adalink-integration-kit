@@ -91,7 +91,7 @@ amarrado ao token da request, single-flight):
 import { createSsoSession } from '@adaflow/sdk';
 
 const session = createSsoSession({
-  adaflowUrl: 'https://app.adalink.ai',
+  adaflowUrl: 'https://adaflow.adalink.ai',
   onSessionLost: () => mostrarTelaDeLogin(),
 });
 
@@ -272,7 +272,7 @@ import { createJwtVerifier, recordAppAccess, AdaflowTokenError } from '@adaflow/
 
 // Um por processo: guarda o JWKS em cache e só busca de novo em rotação de chave.
 const verifier = createJwtVerifier({
-  jwksUrl: process.env.ADAFLOW_JWKS_URL!,
+  jwksUrl: process.env.ADAFLOW_JWKS_URL!, // https://adaflow.adalink.ai/v1/auth/jwks (URL completa, usada como está)
   issuer: process.env.ADAFLOW_JWT_ISSUER, // opcional
 });
 

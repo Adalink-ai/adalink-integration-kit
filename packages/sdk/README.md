@@ -35,7 +35,7 @@ const s2s = new AdaflowClient({ appToken: process.env.ADAFLOW_APP_TOKEN! });
 ```
 
 `baseUrl` resolve nesta ordem: valor explícito → env **`ADAFLOW_BASE_URL`** →
-default de produção (`https://adalink-api-gateway.onrender.com`). Clientes
+default de produção (`https://zeus.adalink.app`). Clientes
 private label com API própria só setam a env — zero mudança de código. O app
 token também pode vir do ambiente (**`ADAFLOW_APP_TOKEN`**, alias `ADA_TOKEN`),
 permitindo `new AdaflowClient()` sem argumentos em integrações server-to-server:
@@ -99,7 +99,7 @@ session.login();         // botão "Entrar" → redireciona ao handoff
 session.completeLogin(); // na página de callback: consome #sso_token e limpa a URL
 
 // Renovação em 401 já embutida; com sessão ativa no Adaflow é transparente
-const res = await session.fetch('https://adalink-api-gateway.onrender.com/v1/autonomous-agents');
+const res = await session.fetch('https://zeus.adalink.app/v1/autonomous-agents');
 ```
 
 As pontas do fluxo continuam disponíveis soltas (`buildHandoffUrl`,

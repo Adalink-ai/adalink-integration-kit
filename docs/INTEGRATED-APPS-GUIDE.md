@@ -7,7 +7,7 @@ Este guia é para desenvolvedores de **apps integrados** à plataforma Adalink:
 aplicações internas ou parceiras (ex.: gestão, koder) hospedadas em domínios
 `*.adalink.ai` / `*.adalink.app` que usam o **Adaflow como Identity Provider**
 e consomem as APIs da plataforma através do **API Gateway**
-(produção: `https://adalink-api-gateway.onrender.com`).
+(produção: `https://zeus.adalink.app`).
 
 Ele cobre as três superfícies de integração:
 
@@ -151,7 +151,7 @@ Passo a passo:
 
    // Nas chamadas à API — renovação em 401 já tratada
    const res = await session.fetch(
-     'https://adalink-api-gateway.onrender.com/v1/autonomous-agents',
+     'https://zeus.adalink.app/v1/autonomous-agents',
    );
 
    // UI reativa (React): useSyncExternalStore(session.subscribe, session.getJwt, () => null)
@@ -215,7 +215,7 @@ usuário vêm do token. Requer a permissão `autonomous-agents.execute` (scope
 ### Execução síncrona
 
 ```bash
-curl -X POST "https://adalink-api-gateway.onrender.com/v1/autonomous-agents/<agentId>/execute" \
+curl -X POST "https://zeus.adalink.app/v1/autonomous-agents/<agentId>/execute" \
   -H "Authorization: Bearer $ADALINK_JWT" \
   -H "Content-Type: application/json" \
   -d '{
@@ -254,7 +254,7 @@ resposta `text/event-stream`; cada evento traz um chunk JSON em `data:`.
 
 ```ts
 const url = new URL(
-  `https://adalink-api-gateway.onrender.com/v1/autonomous-agents/${agentId}/stream`,
+  `https://zeus.adalink.app/v1/autonomous-agents/${agentId}/stream`,
 );
 url.searchParams.set('input', 'Resuma as vendas da semana');
 
@@ -298,7 +298,7 @@ funciona trocando apenas `baseURL` e API key. Documentação completa em
 [OPENAI-COMPAT.md](./OPENAI-COMPAT.md); resumo:
 
 - **Base URL**: `https://<gateway>/v1/openai`
-  (produção: `https://adalink-api-gateway.onrender.com/v1/openai`).
+  (produção: `https://zeus.adalink.app/v1/openai`).
   O path completo do chat é `/v1/openai/chat/completions` — não existe
   `/chat/openai/*`.
 - **Endpoints**: `POST /chat/completions` (stream e não-stream) e
@@ -334,7 +334,7 @@ import OpenAI from 'openai';
 // nele) o gateway aceita app token como Bearer, para SDKs OpenAI funcionarem
 // sem header custom. Com usuário logado, passe o JWT do handoff aqui no lugar.
 const client = new OpenAI({
-  baseURL: 'https://adalink-api-gateway.onrender.com/v1/openai',
+  baseURL: 'https://zeus.adalink.app/v1/openai',
   apiKey: process.env.ADALINK_APP_TOKEN,
 });
 
@@ -415,11 +415,11 @@ especialista tem vale na resposta:
 
 ```bash
 # Com usuário logado (JWT)
-curl "https://adalink-api-gateway.onrender.com/v1/specialists" \
+curl "https://zeus.adalink.app/v1/specialists" \
   -H "Authorization: Bearer $ADALINK_JWT"
 
 # Server-side (app token) — SEMPRE no header x-ada-token nesta rota
-curl "https://adalink-api-gateway.onrender.com/v1/specialists" \
+curl "https://zeus.adalink.app/v1/specialists" \
   -H "x-ada-token: $ADALINK_APP_TOKEN"
 ```
 
@@ -446,7 +446,7 @@ from openai import OpenAI
 # é aceito como Bearer aqui (fora desse prefixo, Bearer é sempre JWT).
 # Com usuário logado no fluxo, use o JWT do handoff como api_key.
 client = OpenAI(
-    base_url="https://adalink-api-gateway.onrender.com/v1/openai",
+    base_url="https://zeus.adalink.app/v1/openai",
     api_key=os.environ["ADALINK_APP_TOKEN"],
 )
 
@@ -537,7 +537,7 @@ Autenticação: **JWT do usuário** (as rotas de escrita exigem role `ADMIN` ou
 ### 4.1 Criar um repositório
 
 ```bash
-curl -X POST "https://adalink-api-gateway.onrender.com/v1/repositories" \
+curl -X POST "https://zeus.adalink.app/v1/repositories" \
   -H "Authorization: Bearer $ADALINK_JWT" \
   -H "Content-Type: application/json" \
   -d '{
@@ -566,7 +566,7 @@ presigned URL, sem passar pelo gateway:
 
 ```bash
 # 1. Pedir a presigned URL (máx. 500 MB por arquivo)
-curl -X POST "https://adalink-api-gateway.onrender.com/v1/repositories/$REPO_ID/files/presign" \
+curl -X POST "https://zeus.adalink.app/v1/repositories/$REPO_ID/files/presign" \
   -H "Authorization: Bearer $ADALINK_JWT" \
   -H "Content-Type: application/json" \
   -d '{"fileName": "contrato-social.pdf", "contentType": "application/pdf", "fileSize": 2097152}'
@@ -578,7 +578,7 @@ curl -X PUT "$PRESIGNED_URL" \
   --data-binary @contrato-social.pdf
 
 # 3. Confirmar — dispara o pipeline de OCR/parsing/embedding
-curl -X POST "https://adalink-api-gateway.onrender.com/v1/repositories/$REPO_ID/files/confirm" \
+curl -X POST "https://zeus.adalink.app/v1/repositories/$REPO_ID/files/confirm" \
   -H "Authorization: Bearer $ADALINK_JWT" \
   -H "Content-Type: application/json" \
   -d "{\"fileId\": \"$FILE_ID\"}"
@@ -601,7 +601,7 @@ Pontos importantes:
 ### 4.3 Vincular ao especialista (fechar o ciclo do RAG)
 
 ```bash
-curl -X POST "https://adalink-api-gateway.onrender.com/v1/specialists/$SPECIALIST_ID/repositories" \
+curl -X POST "https://zeus.adalink.app/v1/specialists/$SPECIALIST_ID/repositories" \
   -H "Authorization: Bearer $ADALINK_JWT" \
   -H "Content-Type: application/json" \
   -d "{\"repositoryId\": \"$REPO_ID\"}"

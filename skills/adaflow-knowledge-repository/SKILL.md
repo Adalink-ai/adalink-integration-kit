@@ -22,7 +22,7 @@ vinculando ao especialista. Fonte de verdade: o
 1. **Criar o repositório**:
 
    ```bash
-   curl -X POST "https://adalink-api-gateway.onrender.com/v1/repositories" \
+   curl -X POST "https://zeus.adalink.app/v1/repositories" \
      -H "Authorization: Bearer $JWT" \
      -H "Content-Type: application/json" \
      -d '{"name": "Base Jurídica", "description": "...", "visibility": "PRIVATE"}'

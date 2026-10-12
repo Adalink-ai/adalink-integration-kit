@@ -22,7 +22,7 @@ Executa um **agente autônomo** da organização a partir deste app, passando o
 2. **Execução síncrona**:
 
    ```bash
-   curl -X POST "https://adalink-api-gateway.onrender.com/v1/autonomous-agents/<agentId>/execute" \
+   curl -X POST "https://zeus.adalink.app/v1/autonomous-agents/<agentId>/execute" \
      -H "Authorization: Bearer $JWT" \
      -H "Content-Type: application/json" \
      -d '{"input": "...", "threadId": "<opcional>"}'

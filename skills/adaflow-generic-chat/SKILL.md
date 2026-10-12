@@ -54,7 +54,7 @@ precisa de conectores/tools MCP/memória, use a skill `adaflow-assistants` (o ag
    // apiKey vai como Bearer. Exceção do /v1/openai: app token é aceito como
    // Bearer aqui. Com usuário logado no fluxo, use o JWT do handoff.
    const client = new OpenAI({
-     baseURL: 'https://adalink-api-gateway.onrender.com/v1/openai',
+     baseURL: 'https://zeus.adalink.app/v1/openai',
      apiKey: credencial,
    });
 

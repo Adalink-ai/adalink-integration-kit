@@ -49,7 +49,7 @@ já causou loop infinito de redirect em produção (ver armadilhas abaixo).
 
 4. **Chamadas à API** — `session.fetch(url, init)` anexa o
    `Authorization: Bearer <jwt>` (produção:
-   `https://adalink-api-gateway.onrender.com`) e trata o 401 sozinho: refaz o
+   `https://zeus.adalink.app`) e trata o 401 sozinho: refaz o
    handoff com guarda de cooldown, ignora 401 atrasado de token antigo e
    garante um único redirect por ciclo. Com sessão viva no Adaflow a
    renovação é transparente (sem digitar senha).

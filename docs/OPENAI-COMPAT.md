@@ -4,7 +4,7 @@ A Adalink expõe uma superfície **compatível com a API da OpenAI** para integr
 externas (SDKs oficiais, LibreChat, n8n, LangChain, etc.) e para a API pública
 whitelabel. Qualquer cliente OpenAI funciona trocando apenas **baseURL + API key**.
 
-- **Base URL**: `https://<gateway>/v1/openai` (produção: `https://adalink-api-gateway.onrender.com/v1/openai`)
+- **Base URL**: `https://<gateway>/v1/openai` (produção: `https://zeus.adalink.app/v1/openai`)
 - **Endpoints**: `POST /chat/completions` (stream e não-stream) e `GET /models`
 - **Inferência**: sempre via **Vercel AI Gateway** com a chave da plataforma
   (env `AI_GATEWAY_API_KEY`) ou BYO-LLM da organização — a chave de provider

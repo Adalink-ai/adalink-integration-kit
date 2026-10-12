@@ -33,9 +33,9 @@ Para chamada pontual de LLM (classificação, extração), use a skill
 
    ```bash
    # usuário logado
-   curl "https://adalink-api-gateway.onrender.com/v1/specialists" -H "Authorization: Bearer $JWT"
+   curl "https://zeus.adalink.app/v1/specialists" -H "Authorization: Bearer $JWT"
    # server-side: app token SÓ no x-ada-token aqui (Bearer → 401 invalid_token)
-   curl "https://adalink-api-gateway.onrender.com/v1/specialists" -H "x-ada-token: $ADALINK_APP_TOKEN"
+   curl "https://zeus.adalink.app/v1/specialists" -H "x-ada-token: $ADALINK_APP_TOKEN"
    ```
 
    Guarde o UUID em env (ex.: `ADAFLOW_ASSISTANT_ID`) em vez de listar a cada
@@ -58,7 +58,7 @@ Para chamada pontual de LLM (classificação, extração), use a skill
    # api_key vai como Bearer. Exceção do /v1/openai: app token é aceito como
    # Bearer aqui. Com usuário logado no fluxo, use o JWT do handoff.
    client = OpenAI(
-       base_url="https://adalink-api-gateway.onrender.com/v1/openai",
+       base_url="https://zeus.adalink.app/v1/openai",
        api_key=credencial,
    )
    stream = client.chat.completions.create(

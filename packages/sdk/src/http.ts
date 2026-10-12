@@ -70,7 +70,7 @@ export interface CallOptions {
   timeoutMs?: number;
 }
 
-export const DEFAULT_BASE_URL = 'https://adalink-api-gateway.onrender.com';
+export const DEFAULT_BASE_URL = 'https://zeus.adalink.app';
 
 /** Leitura segura de env — em browser/bundlers `process` pode não existir. */
 function envVar(name: string): string | undefined {

@@ -11,7 +11,7 @@ import type { NextRequest } from 'next/server';
 export const runtime = 'nodejs';
 
 const ADAFLOW_BASE_URL =
-  process.env.ADAFLOW_BASE_URL ?? 'https://adalink-api-gateway.onrender.com';
+  process.env.ADAFLOW_BASE_URL ?? 'https://zeus.adalink.app';
 
 const ALLOWED_PATHS = new Set([
   'v1/audit/events',

@@ -182,15 +182,30 @@ const { fileId } = await client.repositories.uploadDocument(repo.id, {
   data: await readFile('./contrato.pdf'),
 });
 
-// Vincula ao especialista — arquivos passam a compor o RAG no chat do Adaflow
+// Vincula ao especialista: os arquivos passam a compor o RAG dele
 await client.specialists.linkRepository(specialistId, repo.id);
+
+// Achar um repositório pelo nome, ver os arquivos e tirar as versões antigas
+const { items: [contratos] } = await client.repositories.list({ search: 'Contratos' });
+if (contratos) {
+  const arquivos = await client.repositories.listFiles(contratos.id);
+  // a lista não tem ordem garantida: a mais recente é a de createdAt maior
+  const antigas = [...arquivos].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(1);
+  for (const a of antigas) await client.repositories.removeFile(contratos.id, a.projectFileId);
+}
+
+// Desfazer o vínculo com o especialista
+await client.specialists.unlinkRepository(specialistId, repo.id);
 ```
 
-> O RAG dessas bases vale nas conversas pelo chat do Adaflow; as chamadas
-> `assistant:<uuid>` feitas pelo app ainda não o aplicam.
+> O RAG vale no chat do Adaflow e nas chamadas `assistant:<uuid>` via
+> `/v1/openai`, quando o especialista está com RAG ligado. Nessas chamadas o
+> Adaflow usa a **última mensagem do usuário** como consulta do RAG: mande o
+> contexto do app numa mensagem `system` e deixe a pergunta limpa.
 
 O processamento (OCR/embedding) é assíncrono após o `confirm`; acompanhe via
-`client.repositories.listFiles(repo.id)`.
+`client.repositories.listFiles(repo.id)` (`extractionStatus` e `indexingStatus`).
+Cada envio gera um `projectFileId` novo; a plataforma não substitui arquivo no lugar.
 
 ## Documentos
 

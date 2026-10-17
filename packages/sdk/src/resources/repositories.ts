@@ -1,4 +1,5 @@
 import type { HttpTransport } from '../http.js';
+import type { ExtractionStatus, IndexingStatus } from './documents.js';
 
 export type RepositoryVisibility = 'PRIVATE' | 'TEAM' | 'ORG' | 'PUBLIC';
 
@@ -18,6 +19,44 @@ export interface Repository {
   slug?: string;
   description?: string;
   visibility?: RepositoryVisibility;
+  [key: string]: unknown;
+}
+
+/** Página de `GET /v1/repositories` (formato da plataforma: `items`, não `data`). */
+export interface RepositoryPage {
+  items: Repository[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/** Arquivo vinculado a um repositório (`GET /v1/repositories/:id/files`). */
+export interface RepositoryFile {
+  /** id do vínculo (RepositoryFile) */
+  id: string;
+  repositoryId: string;
+  /** id do arquivo: é este que `removeFile` e `documents.get` recebem. Cada novo envio gera um novo. */
+  projectFileId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  // `(string & {})` aceita status novos da plataforma sem apagar o autocomplete dos conhecidos
+  extractionStatus: ExtractionStatus | (string & {});
+  indexingStatus: IndexingStatus | (string & {});
+  addedBy: string;
+  /** quando o arquivo foi vinculado ao repositório */
+  createdAt: string;
+  chunkCount?: number;
+  errorMessage?: string | null;
+  errorCode?: string | null;
+  /**
+   * Sinal de troca de conteúdo (sha256 calculado na ingestão); `null` enquanto
+   * a ingestão não calculou. Só em versões da plataforma que já o expõem.
+   */
+  fileHash?: string | null;
+  /** última alteração do arquivo (inclui mudanças de status); só em versões que o expõem */
+  fileUpdatedAt?: string;
   [key: string]: unknown;
 }
 
@@ -52,6 +91,11 @@ export class RepositoriesResource {
     private readonly fetchImpl: typeof fetch,
   ) {}
 
+  /** Lista os repositórios visíveis para quem chama, com busca opcional por nome. */
+  async list(query?: { page?: number; limit?: number; search?: string }): Promise<RepositoryPage> {
+    return this.http.requestJson<RepositoryPage>(BASE, { query });
+  }
+
   async create(params: CreateRepositoryParams): Promise<Repository> {
     return this.http.requestJson<Repository>(BASE, { method: 'POST', body: params });
   }
@@ -60,8 +104,20 @@ export class RepositoriesResource {
     return this.http.requestJson<Repository>(`${BASE}/${repositoryId}`);
   }
 
-  async listFiles(repositoryId: string): Promise<unknown> {
-    return this.http.requestJson<unknown>(`${BASE}/${repositoryId}/files`);
+  /** Arquivos do repositório com a situação de extração e indexação (lista completa, sem paginação). */
+  async listFiles(repositoryId: string): Promise<RepositoryFile[]> {
+    return this.http.requestJson<RepositoryFile[]>(`${BASE}/${repositoryId}/files`);
+  }
+
+  /**
+   * Tira o arquivo do repositório (`projectFileId`, não o id do vínculo).
+   * Se era o último vínculo do arquivo, a plataforma apaga também o conteúdo e
+   * os trechos do RAG. Arquivo que veio de fonte externa (SharePoint, Drive)
+   * não volta na próxima sincronização enquanto não mudar na origem.
+   * `404` = o arquivo já não está no repositório (o chamador pode tratar como sucesso).
+   */
+  async removeFile(repositoryId: string, projectFileId: string): Promise<void> {
+    await this.http.request(`${BASE}/${encodeURIComponent(repositoryId)}/files/${encodeURIComponent(projectFileId)}`, { method: 'DELETE' });
   }
 
   /** Passo 1 do upload: gera a presigned URL (máx. 500 MB por arquivo). */

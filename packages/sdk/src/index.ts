@@ -92,6 +92,8 @@ export type {
 export type {
   CreateRepositoryParams,
   Repository,
+  RepositoryFile,
+  RepositoryPage,
   RepositoryVisibility,
   PresignResult,
   UploadDocumentParams,

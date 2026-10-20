@@ -1,5 +1,12 @@
 # @adaflow/mcp
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [3c52c84]
+  - @adaflow/sdk@0.8.0
+
 ## 0.1.2
 
 ### Patch Changes

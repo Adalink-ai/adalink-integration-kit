@@ -26,9 +26,16 @@
  * O `exp` do JWT é lido SEM validar assinatura — aqui ele decide apenas "vale
  * a pena mandar esta request ou renovar antes"; quem autoriza de verdade é
  * sempre o gateway. Ver seção 1 do guia de apps integrados.
+ *
+ * **Renovação sem redirect (0.7).** O JWT vale 15 minutos. Com `authUrl`, o
+ * `completeLogin()` troca o `#sso_code` do handoff por uma sessão de 7 dias
+ * (`POST /v1/auth/partner/handoff/exchange`) e, daí em diante, o JWT vencido
+ * é renovado em `GET /v1/auth/token` sem sair da página. O redirect ao
+ * handoff (com as três defesas) só acontece quando essa renovação é recusada
+ * — sessão de 7 dias vencida ou encerrada — ou quando não há `authUrl`/código.
  */
 
-import { buildHandoffUrl, consumeSsoToken } from './sso.js';
+import { buildHandoffUrl, consumeSsoFragment } from './sso.js';
 
 export interface SsoSessionOptions {
   /** Base URL do Adaflow (Identity Provider), ex.: `https://adaflow.adalink.ai`. */
@@ -40,6 +47,13 @@ export interface SsoSessionOptions {
   callbackUrl?: string;
   /** Chave do `sessionStorage` onde o JWT vive. Default: `adaflow:jwt`. */
   storageKey?: string;
+  /**
+   * Base onde ficam as rotas `/v1/auth/*`: o gateway do Adaflow ou um proxy
+   * do próprio app que as repasse. Com ela, a sessão troca o `#sso_code` por
+   * uma sessão de 7 dias e renova o JWT sem redirect. Sem ela, o
+   * comportamento é o da 0.6 (refaz o handoff a cada expiração).
+   */
+  authUrl?: string;
   /**
    * Janela em que um SEGUNDO handoff automático é recusado (ms). Default:
    * 60 000. Renovação legítima por expiração acontece em escala de horas;
@@ -78,8 +92,17 @@ export interface SsoSession {
    * de retry — token novo que ainda toma 401 precisa encontrá-la armada.
    */
   completeLogin(): string | null;
-  /** Descarta o token local. A sessão no Adaflow continua viva. */
+  /**
+   * Descarta os tokens locais e encerra a sessão de 7 dias do app (melhor
+   * esforço). A sessão do usuário no Adaflow continua viva.
+   */
   logout(): void;
+  /**
+   * Renova o JWT pela sessão de 7 dias, sem redirect. Devolve o JWT novo ou
+   * `null` (sem `authUrl`, sem sessão, ou sessão recusada). Útil para quem
+   * usa interceptor próprio em vez de `session.fetch`.
+   */
+  refresh(): Promise<string | null>;
   /**
    * `fetch` com a sessão embutida: anexa `Authorization`, renova
    * proativamente token expirado e trata 401 com as três defesas acima.
@@ -106,6 +129,9 @@ export interface SsoSession {
 const DEFAULT_STORAGE_KEY = 'adaflow:jwt';
 const DEFAULT_RETRY_COOLDOWN_MS = 60_000;
 const DEFAULT_EXPIRY_LEEWAY_MS = 30_000;
+const EXCHANGE_PATH = '/v1/auth/partner/handoff/exchange';
+const TOKEN_PATH = '/v1/auth/token';
+const SIGN_OUT_PATH = '/v1/auth/sign-out';
 
 /**
  * Lê o `exp` do payload do JWT em milissegundos de epoch, ou `null` se o
@@ -141,6 +167,10 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
   // (não em memória) porque o redirect destrói o documento — a guarda precisa
   // sobreviver à ida e volta do handoff.
   const retryKey = `${storageKey}:renewed-at`;
+  // Token da sessão de 7 dias (`sso-app`). Vive no sessionStorage como o JWT:
+  // some ao fechar a aba e não é enviado a lugar nenhum além de `authUrl`.
+  const sessionKey = `${storageKey}:session`;
+  const authBase = options.authUrl ? options.authUrl.replace(/\/$/, '') : null;
   const cooldownMs = options.retryCooldownMs ?? DEFAULT_RETRY_COOLDOWN_MS;
   const leewayMs = options.expiryLeewayMs ?? DEFAULT_EXPIRY_LEEWAY_MS;
 
@@ -148,6 +178,10 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
   // Single-flight deste documento: depois que um redirect de renovação
   // começou, nada mais tenta outro.
   let redirecting = false;
+  // Single-flight da troca do código e da renovação do JWT: dezenas de
+  // requests vencendo juntas geram UMA chamada a `/v1/auth/token`.
+  let exchangeInFlight: Promise<void> | null = null;
+  let refreshInFlight: Promise<string | null> | null = null;
 
   const isBrowser = (): boolean => typeof window !== 'undefined';
   const notify = (): void => {
@@ -205,7 +239,65 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
     return 'started';
   };
 
+  const saveJwt = (jwt: string): void => {
+    storageSet(storageKey, jwt);
+    notify();
+  };
+
+  /** Troca o `#sso_code` pela sessão de 7 dias. Falha = segue só com o JWT. */
+  const exchangeCode = async (code: string): Promise<void> => {
+    if (!authBase) return;
+    try {
+      const res = await fetch(`${authBase}${EXCHANGE_PATH}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code }),
+        credentials: 'omit',
+      });
+      if (!res.ok) return;
+      const body = (await res.json()) as { token?: unknown };
+      if (typeof body.token === 'string' && body.token.length > 0) {
+        storageSet(sessionKey, body.token);
+      }
+    } catch {
+      /* rede: o app segue com o JWT de 15 min e o handoff de sempre */
+    }
+  };
+
+  const refreshJwt = (): Promise<string | null> => {
+    if (!isBrowser() || !authBase) return Promise.resolve(null);
+    if (refreshInFlight) return refreshInFlight;
+    const sessionToken = storageGet(sessionKey);
+    if (!sessionToken) return Promise.resolve(null);
+
+    refreshInFlight = (async () => {
+      try {
+        const res = await fetch(`${authBase}${TOKEN_PATH}`, {
+          headers: { authorization: `Bearer ${sessionToken}` },
+          credentials: 'omit',
+        });
+        // Sessão de 7 dias vencida ou encerrada: descarta e deixa o handoff
+        // (com as defesas de loop) assumir.
+        if (res.status === 401 || res.status === 403) {
+          storageRemove(sessionKey);
+          return null;
+        }
+        if (!res.ok) return null;
+        const body = (await res.json()) as { token?: unknown };
+        if (typeof body.token !== 'string' || body.token.length === 0) return null;
+        saveJwt(body.token);
+        return body.token;
+      } catch {
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+    return refreshInFlight;
+  };
+
   const sessionLost = (): void => {
+    storageRemove(sessionKey);
     clearJwt();
     options.onSessionLost?.();
   };
@@ -226,11 +318,33 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
   // Documento navegando para o handoff: a promise fica pendente de propósito.
   const pendingForever = (): Promise<Response> => new Promise<Response>(() => {});
 
+  // Request com corpo em stream não pode ser reenviada depois do 401.
+  const canReplay = (input: RequestInfo | URL, init?: RequestInit): boolean =>
+    !(typeof Request !== 'undefined' && input instanceof Request) &&
+    !(typeof ReadableStream !== 'undefined' && init?.body instanceof ReadableStream);
+
+  const withJwt = (
+    input: RequestInfo | URL,
+    init: RequestInit | undefined,
+    jwt: string | null,
+  ): RequestInit | undefined => {
+    if (!jwt) return init;
+    const headers = new Headers(
+      init?.headers ?? (input instanceof Request ? input.headers : undefined),
+    );
+    // Um Authorization explícito do call site tem prioridade.
+    if (!headers.has('authorization')) headers.set('authorization', `Bearer ${jwt}`);
+    return { ...init, headers };
+  };
+
   const sessionFetch = async (
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     if (!isBrowser()) return fetch(input, init);
+
+    // Logo após o callback, a troca do código ainda pode estar em voo.
+    if (exchangeInFlight) await exchangeInFlight;
 
     let jwt = getJwt();
 
@@ -238,24 +352,33 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
     if (jwt) {
       const expMs = readJwtExpMs(jwt);
       if (expMs !== null && Date.now() >= expMs - leewayMs) {
-        if (tryAutoRenew() !== 'refused') return pendingForever();
-        sessionLost();
-        jwt = null; // segue sem Authorization; o chamador recebe o 401 real
+        const renewed = await refreshJwt();
+        if (renewed) {
+          jwt = renewed;
+        } else {
+          if (tryAutoRenew() !== 'refused') return pendingForever();
+          sessionLost();
+          jwt = null; // segue sem Authorization; o chamador recebe o 401 real
+        }
       }
     }
 
-    let next = init;
-    if (jwt) {
-      const headers = new Headers(
-        init?.headers ?? (input instanceof Request ? input.headers : undefined),
-      );
-      // Um Authorization explícito do call site tem prioridade.
-      if (!headers.has('authorization')) headers.set('authorization', `Bearer ${jwt}`);
-      next = { ...init, headers };
+    const res = await fetch(input, withJwt(input, init, jwt));
+    if (res.status !== 401) return res;
+
+    // 401 com a sessão de 7 dias: tenta o JWT corrente (outra request já pode
+    // ter renovado) ou renova agora, e reenvia UMA vez.
+    if (jwt && authBase && canReplay(input, init)) {
+      const current = getJwt();
+      const renewed = current && current !== jwt ? current : current === jwt ? await refreshJwt() : null;
+      if (renewed && renewed !== jwt) {
+        const retry = await fetch(input, withJwt(input, init, renewed));
+        if (retry.status === 401 && handleUnauthorized(renewed)) return pendingForever();
+        return retry;
+      }
     }
 
-    const res = await fetch(input, next);
-    if (res.status === 401 && handleUnauthorized(jwt)) return pendingForever();
+    if (handleUnauthorized(jwt)) return pendingForever();
     return res;
   };
 
@@ -264,6 +387,8 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
     isAuthenticated(): boolean {
       const jwt = getJwt();
       if (!jwt) return false;
+      // JWT vencido com sessão de 7 dias ainda é sessão: o próximo fetch renova.
+      if (storageGet(sessionKey)) return true;
       const expMs = readJwtExpMs(jwt);
       return expMs === null || Date.now() < expMs;
     },
@@ -273,17 +398,34 @@ export function createSsoSession(options: SsoSessionOptions): SsoSession {
     },
     completeLogin(): string | null {
       if (!isBrowser()) return null;
-      const token = consumeSsoToken();
-      if (token) {
-        storageSet(storageKey, token);
-        notify();
+      const fragment = consumeSsoFragment();
+      if (!fragment) return null;
+      // Login novo: a sessão de 7 dias anterior pode ser de outro usuário.
+      storageRemove(sessionKey);
+      saveJwt(fragment.token);
+      if (fragment.code && authBase) {
+        exchangeInFlight = exchangeCode(fragment.code).finally(() => {
+          exchangeInFlight = null;
+        });
       }
-      return token;
+      return fragment.token;
     },
     logout(): void {
       if (!isBrowser()) return;
+      const sessionToken = storageGet(sessionKey);
+      storageRemove(sessionKey);
       clearJwt();
+      if (sessionToken && authBase) {
+        // Melhor esforço: a sessão de 7 dias também vence sozinha.
+        fetch(`${authBase}${SIGN_OUT_PATH}`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+          body: '{}',
+          credentials: 'omit',
+        }).catch(() => undefined);
+      }
     },
+    refresh: refreshJwt,
     fetch: sessionFetch,
     handleUnauthorized,
     subscribe(listener: () => void): () => void {

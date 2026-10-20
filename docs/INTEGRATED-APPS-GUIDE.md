@@ -136,6 +136,7 @@ Passo a passo:
 
    export const session = createSsoSession({
      adaflowUrl: 'https://<adaflow>',
+     authUrl: 'https://<gateway>', // rotas /v1/auth/* (ou o proxy do seu app)
      callbackUrl: '/auth/callback', // página do redirect-url (default)
      onSessionLost: () => {
        // renovação automática esgotada — mostre sua tela de "Entrar".
@@ -157,11 +158,24 @@ Passo a passo:
    // UI reativa (React): useSyncExternalStore(session.subscribe, session.getJwt, () => null)
    ```
 
-6. **Expiração**: o JWT é de curta duração; não existe refresh token — renovar
-   é repetir o handoff. Se a sessão do Adaflow ainda existir, o ciclo é
-   transparente para o usuário: ele volta ao seu app já com um token novo, sem
-   digitar senha. `session.fetch` faz isso sozinho ao receber `401` (e
-   proativamente quando o `exp` do token já passou).
+6. **Expiração**: o JWT vale 15 minutos. Junto com ele o handoff entrega um
+   código de uso único (`#sso_code=`, 3 minutos). Com `authUrl`, o
+   `completeLogin()` troca o código por uma sessão de 7 dias
+   (`POST /v1/auth/partner/handoff/exchange`, sem cookie) e o `session.fetch`
+   renova o JWT em `GET /v1/auth/token` sem sair da página, inclusive quando o
+   usuário fica mais de 1 hora parado no Adaflow. A sessão é restrita às rotas
+   que o SDK usa (escopo `sso-app`).
+
+   Só quando essa renovação é recusada (sessão de 7 dias vencida ou
+   encerrada), ou sem `authUrl`, renovar é repetir o handoff. Se a sessão do
+   Adaflow ainda existir, o ciclo é transparente para o usuário: ele volta ao
+   seu app já com um token novo, sem digitar senha. `session.fetch` faz isso
+   sozinho ao receber `401` (e proativamente quando o `exp` do token já
+   passou).
+
+   Se o seu app chama o gateway pelo próprio proxy, o proxy precisa repassar
+   `POST /v1/auth/partner/handoff/exchange`, `GET /v1/auth/token` e
+   `POST /v1/auth/sign-out`, mantendo o header `Origin` do browser.
 
    > **Se for implementar a renovação à mão** (sem `createSsoSession`), três
    > armadilhas já causaram loop infinito de redirect em produção — todas

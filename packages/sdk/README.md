@@ -92,11 +92,14 @@ import { createSsoSession } from '@adaflow/sdk';
 
 const session = createSsoSession({
   adaflowUrl: 'https://adaflow.adalink.ai',
+  // Onde ficam as rotas /v1/auth/* (gateway, ou proxy do seu app). Com ela o
+  // JWT de 15 min é renovado sem redirect por até 7 dias.
+  authUrl: 'https://zeus.adalink.app',
   onSessionLost: () => mostrarTelaDeLogin(),
 });
 
 session.login();         // botão "Entrar" → redireciona ao handoff
-session.completeLogin(); // na página de callback: consome #sso_token e limpa a URL
+session.completeLogin(); // na página de callback: consome #sso_token/#sso_code e limpa a URL
 
 // Renovação em 401 já embutida; com sessão ativa no Adaflow é transparente
 const res = await session.fetch('https://zeus.adalink.app/v1/autonomous-agents');

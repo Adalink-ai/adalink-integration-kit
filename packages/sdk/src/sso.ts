@@ -34,3 +34,33 @@ export function consumeSsoToken(options: ConsumeSsoTokenOptions = {}): string | 
   }
   return decodeURIComponent(raw);
 }
+
+/** O que o handoff entrega no fragment. */
+export interface SsoFragment {
+  /** JWT de 15 minutos (`#sso_token=`). */
+  token: string;
+  /**
+   * Código de uso único (`#sso_code=`) que vira a sessão de 7 dias do app, ou
+   * `null` quando o Adaflow não o emitiu (versão anterior ou falha).
+   */
+  code: string | null;
+}
+
+/**
+ * Como `consumeSsoToken`, mas devolve também o `sso_code`. O código precisa
+ * ser lido ANTES de limpar a URL. Retorna `null` se o fragment não traz token.
+ */
+export function consumeSsoFragment(options: ConsumeSsoTokenOptions = {}): SsoFragment | null {
+  if (typeof window === 'undefined') {
+    throw new Error('consumeSsoFragment só funciona em browser (window indisponível).');
+  }
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const raw = params.get('sso_token');
+  if (!raw) return null;
+  const code = params.get('sso_code');
+
+  if (options.cleanUrl !== false) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  return { token: decodeURIComponent(raw), code: code ? decodeURIComponent(code) : null };
+}

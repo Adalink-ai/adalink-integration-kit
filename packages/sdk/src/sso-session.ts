@@ -27,7 +27,7 @@
  * a pena mandar esta request ou renovar antes"; quem autoriza de verdade é
  * sempre o gateway. Ver seção 1 do guia de apps integrados.
  *
- * **Renovação sem redirect (0.7).** O JWT vale 15 minutos. Com `authUrl`, o
+ * **Renovação sem redirect (0.8).** O JWT vale 15 minutos. Com `authUrl`, o
  * `completeLogin()` troca o `#sso_code` do handoff por uma sessão de 7 dias
  * (`POST /v1/auth/partner/handoff/exchange`) e, daí em diante, o JWT vencido
  * é renovado em `GET /v1/auth/token` sem sair da página. O redirect ao

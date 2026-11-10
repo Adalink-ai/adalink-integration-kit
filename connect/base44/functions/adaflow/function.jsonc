@@ -1,0 +1,6 @@
+{
+  // Backend Function do Adaflow Connect. Chame do frontend com
+  // base44.functions.fetch('/adaflow', { method: 'POST', body: JSON.stringify({ action, ... }) }).
+  "name": "adaflow",
+  "entry": "entry.ts"
+}

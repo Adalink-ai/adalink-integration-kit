@@ -1,0 +1,630 @@
+openapi: 3.1.0
+info:
+  title: Adaflow API (Adaflow Connect)
+  version: 0.1.0
+  summary: Recorte público da API da Adaflow para apps feitos em Base44, v0 e outras plataformas.
+  description: |
+    Spec curada do Adaflow Connect. Cobre só o que um app integrado precisa e
+    o que funciona com o token de app (`x-ada-token`):
+
+    - descobrir especialistas e agentes autônomos da organização;
+    - conversar com um especialista ou chamar um modelo pela API compatível com OpenAI;
+    - executar um agente autônomo;
+    - consultar repositórios de conhecimento;
+    - registrar eventos do app na trilha de governança.
+
+    Rotas administrativas, internas e as que exigem JWT de um usuário ADMIN
+    (criar repositório, ler a trilha de auditoria) ficam de fora de propósito.
+
+    O token de app só pode ser usado no servidor (Backend Function, route
+    handler, server action). Nunca o coloque no código do navegador.
+
+    Streaming: as respostas `text/event-stream` (`stream: true` no chat e
+    `/stream` dos agentes) precisam de um proxy que repasse SSE. Na Base44,
+    use a Backend Function `adaflow` do kit em vez da integração OpenAPI.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://zeus.adalink.app
+    description: Produção (clientes private label usam o gateway próprio)
+security:
+  - AdaToken: []
+tags:
+  - name: Especialistas
+    description: Assistentes configurados na Adaflow, com instruções, skills e conectores próprios.
+  - name: Agentes
+    description: Agentes autônomos que executam tarefas de várias etapas.
+  - name: Chat
+    description: API compatível com OpenAI, para modelos do catálogo ou especialistas.
+  - name: Conhecimento
+    description: Repositórios de conhecimento que alimentam o RAG dos especialistas.
+  - name: Governança
+    description: Eventos do app na trilha de auditoria da organização.
+paths:
+  /v1/specialists:
+    get:
+      operationId: listSpecialists
+      tags: [Especialistas]
+      summary: Listar especialistas
+      description: |
+        Especialistas visíveis para a credencial. Use o `id` no campo `model`
+        do chat, no formato `assistant:<id>`.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de especialistas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecialistPage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/specialists/{specialistId}:
+    get:
+      operationId: getSpecialist
+      tags: [Especialistas]
+      summary: Detalhar um especialista
+      parameters:
+        - $ref: '#/components/parameters/SpecialistId'
+      responses:
+        '200':
+          description: Especialista.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Specialist'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/autonomous-agents:
+    get:
+      operationId: listAgents
+      tags: [Agentes]
+      summary: Listar agentes autônomos
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de agentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/autonomous-agents/{agentId}:
+    get:
+      operationId: getAgent
+      tags: [Agentes]
+      summary: Detalhar um agente autônomo
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousAgent'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/autonomous-agents/{agentId}/execute:
+    post:
+      operationId: executeAgent
+      tags: [Agentes]
+      summary: Executar um agente (síncrono)
+      description: |
+        Responde ao fim da execução, que pode levar minutos. Exige a permissão
+        `autonomous-agents.execute`. Para acompanhar em tempo real, use
+        `GET /v1/autonomous-agents/{agentId}/stream`.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteAgentRequest'
+      responses:
+        '200':
+          description: Execução concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentExecution'
+        '201':
+          description: Execução concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentExecution'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/autonomous-agents/{agentId}/stream:
+    get:
+      operationId: streamAgent
+      tags: [Agentes]
+      summary: Executar um agente com streaming (SSE)
+      description: |
+        Cada evento `data:` traz um objeto JSON com o progresso da execução.
+        Precisa de um proxy que repasse `text/event-stream`.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+        - name: input
+          in: query
+          required: true
+          description: Mensagem ou comando para o agente (até 50.000 caracteres).
+          schema: { type: string, maxLength: 50000 }
+        - name: threadId
+          in: query
+          required: false
+          description: Reenvie o mesmo valor para manter o contexto entre execuções.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Fluxo de eventos.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/openai/chat/completions:
+    post:
+      operationId: createChatCompletion
+      tags: [Chat]
+      summary: Chat compatível com OpenAI (modelo ou especialista)
+      description: |
+        `model` aceita um id do catálogo (`GET /v1/openai/models`) ou
+        `assistant:<id do especialista>`, que aplica as instruções, skills,
+        conectores e a governança do especialista.
+
+        Histórico no servidor: envie `chat_id` e, nos turnos seguintes, o valor
+        do header `x-chat-id` da resposta (pode diferir do enviado) com só a
+        mensagem nova.
+
+        Limites desta rota: só texto (sem imagem ou PDF), sem `tools` do
+        cliente e sem saída estruturada (`response_format` é ignorado).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: 'Resposta completa (`stream` falso) ou fluxo SSE (`stream` verdadeiro), terminado por `data: [DONE]`.'
+          headers:
+            x-chat-id:
+              description: Id efetivo da conversa. Guarde para o próximo turno.
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletion'
+            text/event-stream:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/OpenAiError' }
+        '401': { $ref: '#/components/responses/OpenAiError' }
+        '404': { $ref: '#/components/responses/OpenAiError' }
+        '429': { $ref: '#/components/responses/OpenAiError' }
+  /v1/openai/models:
+    get:
+      operationId: listModels
+      tags: [Chat]
+      summary: Listar modelos do catálogo
+      responses:
+        '200':
+          description: Modelos no formato OpenAI.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  object: { type: string, example: list }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id]
+                      properties:
+                        id: { type: string, example: anthropic/claude-haiku-4.5 }
+                        object: { type: string, example: model }
+                        owned_by: { type: string }
+        '401': { $ref: '#/components/responses/OpenAiError' }
+  /v1/repositories:
+    get:
+      operationId: listRepositories
+      tags: [Conhecimento]
+      summary: Listar repositórios de conhecimento
+      description: Criar repositório e enviar arquivos exige JWT de usuário e não faz parte desta spec.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de repositórios.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryPage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/repositories/{repositoryId}/files:
+    get:
+      operationId: listRepositoryFiles
+      tags: [Conhecimento]
+      summary: Listar arquivos de um repositório
+      description: Lista completa, sem paginação, com a situação de extração e indexação de cada arquivo.
+      parameters:
+        - name: repositoryId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Arquivos do repositório.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepositoryFile'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/audit/events/batch:
+    post:
+      operationId: trackEvents
+      tags: [Governança]
+      summary: Registrar eventos do app na trilha de governança
+      description: |
+        Os eventos aparecem no módulo Governança como `App: <app>`.
+        Idempotente por `eventId`: reenvios contam em `duplicated`.
+        Até 50 eventos por chamada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackEventsRequest'
+      responses:
+        '200':
+          description: Resultado do lote.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackEventsResult'
+        '201':
+          description: Resultado do lote.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackEventsResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+components:
+  securitySchemes:
+    AdaToken:
+      type: apiKey
+      in: header
+      name: x-ada-token
+      description: Token de app criado no painel da Adaflow. Uso só no servidor.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Search:
+      name: search
+      in: query
+      required: false
+      description: Busca por nome.
+      schema: { type: string }
+    SpecialistId:
+      name: specialistId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AgentId:
+      name: agentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    BadRequest:
+      description: Requisição inválida.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GatewayError' }
+    Unauthorized:
+      description: Token ausente, inválido ou revogado.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GatewayError' }
+    Forbidden:
+      description: A credencial não tem a permissão exigida.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GatewayError' }
+    NotFound:
+      description: Recurso não encontrado ou não visível para a credencial.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GatewayError' }
+    TooManyRequests:
+      description: Sem saldo de créditos (`insufficient_quota`, condição do cliente) ou limite de requisições (`rate_limit_exceeded`, aplicar backoff).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GatewayError' }
+    OpenAiError:
+      description: Erro no envelope da OpenAI. `code` estável, por exemplo `invalid_api_key`, `model_not_found`, `insufficient_quota` (429, sem saldo) ou `rate_limit_exceeded` (429).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OpenAiError' }
+  schemas:
+    GatewayError:
+      type: object
+      properties:
+        statusCode: { type: integer }
+        error: { type: string }
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+    OpenAiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [message]
+          properties:
+            message: { type: string }
+            type: { type: string }
+            code: { type: [string, 'null'] }
+    Specialist:
+      type: object
+      required: [id, name]
+      additionalProperties: true
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        slug: { type: [string, 'null'] }
+    SpecialistPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Specialist' }
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        totalPages: { type: integer }
+    AutonomousAgent:
+      type: object
+      required: [id, name]
+      additionalProperties: true
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { type: string }
+        model: { type: string }
+    AgentPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AutonomousAgent' }
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+    ExecuteAgentRequest:
+      type: object
+      required: [input]
+      properties:
+        input:
+          type: string
+          minLength: 1
+          maxLength: 50000
+          description: Mensagem ou comando para o agente.
+        threadId:
+          type: string
+          description: Reenvie o mesmo valor para manter o contexto entre execuções.
+    AgentExecution:
+      type: object
+      required: [id, agentId, status]
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        agentId: { type: string }
+        input: { type: string }
+        output: { type: string }
+        threadId: { type: [string, 'null'] }
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        error: { type: [string, 'null'] }
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+        content:
+          type: string
+          description: Só texto.
+    ChatCompletionRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model:
+          type: string
+          description: Id do catálogo ou `assistant:<id do especialista>`.
+          examples: [anthropic/claude-haiku-4.5, 'assistant:0190f7a2-4c1e-7b3d-9a2f-1c2d3e4f5a6b']
+        messages:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ChatMessage' }
+        temperature: { type: number, minimum: 0, maximum: 2 }
+        max_tokens: { type: integer, minimum: 1 }
+        chat_id:
+          type: string
+          format: uuid
+          description: Conversa com histórico no servidor.
+        stream: { type: boolean, default: false }
+        stream_options:
+          type: object
+          properties:
+            include_usage:
+              type: boolean
+              description: Envia um último evento com `usage` antes do `[DONE]`.
+    ChatUsage:
+      type: object
+      properties:
+        prompt_tokens: { type: integer }
+        completion_tokens: { type: integer }
+        total_tokens: { type: integer }
+    ChatCompletion:
+      type: object
+      required: [id, choices]
+      properties:
+        id: { type: string }
+        object: { type: string, example: chat.completion }
+        model: { type: string }
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              message:
+                type: object
+                properties:
+                  role: { type: string }
+                  content: { type: string }
+              finish_reason:
+                type: [string, 'null']
+                description: '`length` indica resposta cortada por `max_tokens`.'
+        usage:
+          $ref: '#/components/schemas/ChatUsage'
+    Repository:
+      type: object
+      required: [id, name]
+      additionalProperties: true
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: [string, 'null'] }
+        visibility:
+          type: string
+          enum: [PRIVATE, TEAM, ORG, PUBLIC]
+    RepositoryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Repository' }
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        totalPages: { type: integer }
+    RepositoryFile:
+      type: object
+      required: [id, projectFileId, fileName]
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        repositoryId: { type: string }
+        projectFileId: { type: string }
+        fileName: { type: string }
+        contentType: { type: string }
+        size: { type: integer }
+        extractionStatus:
+          type: string
+          description: PENDING, PROCESSING, COMPLETED ou FAILED.
+        indexingStatus:
+          type: string
+          description: NONE, QUEUED, PROCESSING, COMPLETED ou FAILED.
+        chunkCount: { type: integer }
+        errorMessage: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    AuditEvent:
+      type: object
+      required: [app, action, resource, eventId]
+      properties:
+        app:
+          type: string
+          description: 'Slug do app de origem (ex.: `meu-app-vendas`). Aparece como `App: <app>` na Governança.'
+        action:
+          type: string
+          pattern: '^app\.[a-z0-9_-]+(\.[a-z0-9_-]+){1,4}$'
+          description: 'Formato `app.<domínio>.<verbo>`, por exemplo `app.contrato.aprovado`.'
+        resource:
+          type: string
+          description: 'Tipo do recurso afetado, por exemplo `Contrato`.'
+        resourceId:
+          type: string
+          format: uuid
+          description: UUID do recurso na plataforma. Ids próprios do app vão em `metadata`.
+        actionLabel: { type: string }
+        category: { type: string }
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        success: { type: boolean }
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Contexto extra, até 4 KB serializado. Nunca dados pessoais ou segredos.
+        occurredAt:
+          type: string
+          format: date-time
+          description: Aceito de 7 dias atrás até 5 minutos no futuro.
+        eventId:
+          type: string
+          description: Chave de idempotência.
+    TrackEventsRequest:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/AuditEvent' }
+    TrackEventsResult:
+      type: object
+      properties:
+        accepted: { type: integer }
+        duplicated: { type: integer }
+        rejected:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              reason: { type: string }

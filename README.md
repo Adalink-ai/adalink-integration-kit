@@ -43,6 +43,7 @@ mudanças com `claude plugin validate .`.
 | [`packages/mcp`](./packages/mcp) | [`@adaflow/mcp`](./packages/mcp/README.md) — servidor MCP (stdio) sobre o SDK, usado pelo plugin do Claude Code |
 | [`.claude-plugin/`](./.claude-plugin) + [`commands/`](./commands) | Manifesto do plugin `adaflow`, marketplace `adalink` e comandos `/adaflow:*` |
 | [`packages/cli`](./packages/cli) | [`@adaflow/cli`](./packages/cli/README.md) — binário `adaflow`; instala e atualiza as skills nos projetos (`adaflow skills add\|update\|list`) |
+| [`connect/`](./connect/README.md) | Adaflow Connect: spec OpenAPI pública e curada, e o guia da [Base44](./connect/base44/README.md) com a Backend Function pronta |
 | [`templates/nextjs`](./templates/nextjs) | Starter NextJS + Tailwind 4 + shadcn/ui + Prisma com SSO handoff e chat com IA prontos — via [`create-adaflow-app`](#templates) |
 
 ## Skills

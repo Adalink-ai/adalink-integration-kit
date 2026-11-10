@@ -66,12 +66,19 @@ function ok(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] };
 }
 
+const AUTH_HINT_LOCAL =
+  ' Credencial inválida ou expirada: revise ADAFLOW_APP_TOKEN / ADAFLOW_JWT na configuração do plugin.';
+const AUTH_HINT_REMOTE =
+  ' Credencial inválida ou expirada: revise o token de app (x-ada-token ou Bearer ada_...) ou o JWT configurado na conexão MCP.';
+
 /** Converte qualquer falha em resultado de tool com `isError`, com dica acionável. */
-export function toolError(err: unknown): CallToolResult {
+export function toolError(err: unknown, options: { remote?: boolean } = {}): CallToolResult {
   let text: string;
   if (err instanceof AdaflowApiError) {
     const hint = err.isAuthError
-      ? ' Credencial inválida ou expirada: revise ADAFLOW_APP_TOKEN / ADAFLOW_JWT na configuração do plugin.'
+      ? options.remote
+        ? AUTH_HINT_REMOTE
+        : AUTH_HINT_LOCAL
       : err.isInsufficientQuota
         ? ' A organização está sem saldo de créditos.'
         : err.status === 403
@@ -87,8 +94,22 @@ export function toolError(err: unknown): CallToolResult {
 const READ_ONLY = { readOnlyHint: true, openWorldHint: true } as const;
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: true } as const;
 
-/** Cria o servidor MCP com todas as tools do Adaflow. */
-export function createAdaflowMcpServer(source: ClientSource): McpServer {
+export interface AdaflowMcpServerOptions {
+  /**
+   * Servidor remoto (HTTP), compartilhado entre organizações. Deixa de fora as
+   * tools que leem o disco da máquina onde o servidor roda (`upload_document`):
+   * num servidor remoto, o caminho informado pelo cliente leria arquivos do
+   * próprio servidor.
+   */
+  remote?: boolean;
+}
+
+/** Tools que só existem no servidor local (stdio). */
+export const LOCAL_ONLY_TOOLS = ['upload_document'] as const;
+
+/** Cria o servidor MCP com as tools do Adaflow. */
+export function createAdaflowMcpServer(source: ClientSource, options: AdaflowMcpServerOptions = {}): McpServer {
+  const remote = options.remote === true;
   let cached: AdaflowClient | undefined;
   // Client lazy: o servidor sobe mesmo sem credencial e a tool explica o que falta.
   const client = (): AdaflowClient => {
@@ -102,7 +123,7 @@ export function createAdaflowMcpServer(source: ClientSource): McpServer {
       try {
         return ok(await fn(args));
       } catch (err) {
-        return toolError(err);
+        return toolError(err, { remote });
       }
     };
 
@@ -277,7 +298,7 @@ export function createAdaflowMcpServer(source: ClientSource): McpServer {
     }),
   );
 
-  server.registerTool(
+  if (!remote) server.registerTool(
     'upload_document',
     {
       title: 'Enviar documento ao repositório',

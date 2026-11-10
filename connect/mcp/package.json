@@ -1,0 +1,17 @@
+{
+  "name": "@adaflow/connect-mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deploy na Vercel do servidor MCP remoto do Adaflow Connect",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@adaflow/mcp": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0"
+  }
+}

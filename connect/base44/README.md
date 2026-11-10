@@ -193,9 +193,12 @@ quem quer o mesmo token em vários apps do workspace e não precisa de streaming
 
 ## Limites conhecidos
 
-- **Auditoria:** com token de app, tudo o que o app faz aparece na Adaflow em
-  nome do usuário de serviço. O SSO com o usuário real ainda não funciona no
-  preview da Base44.
+- **Auditoria e SSO:** com token de app, tudo o que o app faz aparece na
+  Adaflow em nome do usuário de serviço. O login com o usuário real (SSO) não
+  vale no preview nem em domínios da Base44 (`*.base44.app`): esses domínios
+  são compartilhados por todos os usuários da plataforma, e a Adaflow só
+  entrega o login a apps publicados na nuvem Adalink (`adalink.ai` ou
+  `adalink.app`). Na Base44, use sempre o token de app.
 - **Origem:** a função envia `x-ada-client: base44`, mas a plataforma só
   reconhece esse valor depois de incluí-lo na lista de apps conhecidos. Até
   lá, a chamada aparece como origem `unknown`.

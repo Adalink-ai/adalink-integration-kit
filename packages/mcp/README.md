@@ -65,7 +65,7 @@ erro explicando o que configurar.
 | `chat` | escrita | Mensagem para `assistant:<uuid>` ou modelo do catálogo, com `chatId` para continuar |
 | `list_agents` / `execute_agent` | leitura / escrita | Agentes autônomos (execução síncrona, `threadId` para contexto) |
 | `create_repository` | escrita | Novo repositório de conhecimento |
-| `upload_document` | escrita | Envia arquivo local (presign → PUT → confirm) |
+| `upload_document` | escrita | Envia arquivo local (presign → PUT → confirm). Só no servidor local |
 | `list_repository_files` | leitura | Arquivos e status de processamento |
 | `list_audit_logs` / `governance_overview` | leitura | Trilha de auditoria e dashboard executivo |
 | `billing` | leitura | Saldo da wallet e consumo |
@@ -75,6 +75,30 @@ anotações podem liberá-las sem confirmação.
 
 > ⚠️ RAG das bases vinculadas ao especialista não se aplica por API (vale para
 > a tool `chat` também). Ver o [guia de apps integrados](../../docs/INTEGRATED-APPS-GUIDE.md).
+
+## Servidor remoto (HTTP)
+
+O mesmo conjunto de tools também roda como servidor remoto, para clientes MCP
+que só aceitam URL, como o chat do v0 e da Base44. O handler fica em
+`@adaflow/mcp/remote`:
+
+```ts
+import { createRemoteMcpHandler } from '@adaflow/mcp/remote';
+
+const handler = createRemoteMcpHandler(); // (req: Request) => Promise<Response>
+```
+
+- **Sem sessão:** cada `POST` traz a própria credencial e vira um client só
+  daquela requisição. Dá para rodar em função serverless.
+- **Credencial:** `x-ada-token: ada_...`, `Authorization: Bearer ada_...`
+  (token de app) ou `Authorization: Bearer <jwt>` (usuário logado). Sem
+  credencial responde 401; `x-ada-token` junto com um JWT diferente, 400.
+- **Sem `upload_document`:** no servidor remoto o caminho informado leria
+  arquivos do próprio servidor.
+- **Gateway fixo:** vem de `baseUrl` ou `ADAFLOW_BASE_URL`, nunca da
+  requisição.
+
+O deploy na Vercel está em [`connect/mcp`](../../connect/mcp/README.md).
 
 ## Desenvolvimento
 

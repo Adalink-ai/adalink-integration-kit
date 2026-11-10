@@ -92,6 +92,18 @@ Peça ao builder o que você quer construir, por exemplo "uma tela de chat com o
 especialista Jurídico usando a função adaflow". O prompt de instalação já
 explica a função ao builder; os exemplos abaixo são a referência.
 
+### Opcional: MCP no chat do editor
+
+Para o chat de IA da Base44 conhecer seus especialistas e agentes enquanto
+gera o app, conecte o MCP da Adaflow nas conexões MCP da sua conta:
+
+- URL: `https://adaflow-mcp.adalink.app/mcp`
+- Credencial: o mesmo token de app, no header `x-ada-token` ou como Bearer
+  token
+
+O MCP só atua durante a geração. O app publicado continua chamando a Adaflow
+pela Backend Function `adaflow`. Detalhes no [guia do MCP](../mcp/README.md).
+
 ## Ações da função
 
 Sempre `POST` com JSON. Toda resposta de erro tem o formato

@@ -3,3 +3,4 @@ packages:
   - templates/*
   - connect
   - connect/mcp
+  - connect/v0

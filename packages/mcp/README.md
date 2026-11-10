@@ -98,7 +98,8 @@ const handler = createRemoteMcpHandler(); // (req: Request) => Promise<Response>
 - **Gateway fixo:** vem de `baseUrl` ou `ADAFLOW_BASE_URL`, nunca da
   requisição.
 
-O deploy na Vercel está em [`connect/mcp`](../../connect/mcp/README.md).
+Em produção: `https://adaflow-mcp.adalink.app/mcp`. O deploy na Vercel está em
+[`connect/mcp`](../../connect/mcp/README.md).
 
 ## Desenvolvimento
 

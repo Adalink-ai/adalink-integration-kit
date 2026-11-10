@@ -7,11 +7,10 @@ comum e uma camada fina por plataforma.
 |---|---|
 | [`openapi/adaflow.yaml`](./openapi/adaflow.yaml) | Spec OpenAPI 3.1 pública e curada: só as rotas que um app integrado usa com token de app. Sem rotas administrativas ou internas |
 | [`base44/`](./base44/README.md) | Guia da Base44 e a Backend Function [`adaflow`](./base44/functions/adaflow/entry.ts) (proxy com streaming) |
-| [`mcp/`](./mcp/README.md) | Deploy na Vercel do MCP remoto, aberto a todas as organizações, com token de app ou JWT do usuário |
+| [`mcp/`](./mcp/README.md) | MCP remoto em `https://adaflow-mcp.adalink.app/mcp`, aberto a todas as organizações, com token de app ou JWT do usuário |
+| [`v0/`](./v0/README.md) | Registry shadcn com os blocos `adaflow-chat` e `adaflow-agent-runner`, e a vitrine com o botão Abrir no v0 |
 | [`prompts/`](./prompts) | Prompts de instalação para colar no builder de cada plataforma |
-| `test/` | Testes da spec e da função (`pnpm --filter @adaflow/connect test`) |
-
-Próxima fase: v0 (registry shadcn com botão *Open in v0*).
+| `test/` | Testes da spec e da função da Base44 (`pnpm --filter @adaflow/connect test`) |
 
 ## Regras do núcleo
 

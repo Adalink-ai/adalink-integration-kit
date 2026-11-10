@@ -5,6 +5,8 @@ cliente MCP com transporte HTTP) conhecerem a organização enquanto geram o
 app: especialistas, agentes, modelos, repositórios de conhecimento e
 governança.
 
+**Endereço de produção: `https://adaflow-mcp.adalink.app/mcp`**
+
 Aberto a todas as organizações. Cada requisição traz a própria credencial, e
 nada fica guardado entre requisições. O código está em
 [`@adaflow/mcp/remote`](../../packages/mcp/README.md#servidor-remoto-http);
@@ -36,16 +38,21 @@ certa; com token de app, essas tools respondem 401 ou 403 explicando o motivo.
 
 ## Deploy na Vercel
 
+O projeto de produção já está no ar. Os passos abaixo valem para refazer o
+deploy ou subir outro ambiente (por exemplo, um gateway private label).
+
 1. Crie um projeto na Vercel a partir deste repositório, com **Root Directory**
    `connect/mcp`. A Vercel detecta o workspace pnpm e instala pela raiz.
 2. O `vercel.json` já define o build (`@adaflow/sdk` e `@adaflow/mcp`), a rota
    `/mcp` e 300 s de duração máxima, porque `execute_agent` pode levar minutos.
-3. Variável de ambiente opcional: `ADAFLOW_BASE_URL`, para um gateway que não
+3. A pasta `public/` existe só porque a Vercel exige uma saída estática quando
+   há comando de build; ela guarda uma página que explica o endpoint.
+4. Variável de ambiente opcional: `ADAFLOW_BASE_URL`, para um gateway que não
    seja o de produção. O gateway nunca vem da requisição.
-4. Depois do deploy, teste:
+5. Depois do deploy, teste (troque o endereço se for outro ambiente):
 
 ```bash
-curl -sS -X POST https://<seu-projeto>.vercel.app/mcp \
+curl -sS -X POST https://adaflow-mcp.adalink.app/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "x-ada-token: $ADAFLOW_APP_TOKEN" \
@@ -56,9 +63,9 @@ curl -sS -X POST https://<seu-projeto>.vercel.app/mcp \
 
 | Builder | Onde | Credencial |
 |---|---|---|
-| v0 | MCP Connections, com a URL `https://<seu-projeto>.vercel.app/mcp` | Bearer token (`ada_...`) ou header `x-ada-token` |
+| v0 | MCP Connections, com a URL `https://adaflow-mcp.adalink.app/mcp` | Bearer token (`ada_...`) ou header `x-ada-token` |
 | Base44 | MCP connections da conta, com a mesma URL | Header `x-ada-token` ou Bearer token |
-| Claude Code | `claude mcp add --transport http adaflow https://<seu-projeto>.vercel.app/mcp --header "x-ada-token: $ADAFLOW_APP_TOKEN"` | Header |
+| Claude Code | `claude mcp add --transport http adaflow https://adaflow-mcp.adalink.app/mcp --header "x-ada-token: $ADAFLOW_APP_TOKEN"` | Header |
 
 O MCP só atua enquanto o builder gera código. O app gerado continua chamando a
 API da Adaflow pelo próprio backend (Backend Function na Base44, route handler

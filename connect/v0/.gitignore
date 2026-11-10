@@ -1,0 +1,5 @@
+.next/
+public/r/
+.vercel/
+next-env.d.ts
+*.tsbuildinfo

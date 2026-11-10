@@ -21,7 +21,7 @@ credencial sensível). O plugin entrega:
 
 | Componente | O que faz |
 |---|---|
-| Skills (`skills/`) | As seis skills de integração abaixo, ativadas automaticamente pelo contexto do pedido |
+| Skills (`skills/`) | As oito skills de integração abaixo, ativadas automaticamente pelo contexto do pedido |
 | `/adaflow:new-app <nome>` | Cria um app a partir do template NextJS via `create-adaflow-app` |
 | `/adaflow:integrate <superfície>` | Implementa `sso`, `assistants`, `agent`, `chat`, `knowledge` ou `governance` no app atual |
 | `/adaflow:doctor` | Valida credencial, gateway, acesso a especialistas/agentes e saldo |
@@ -43,7 +43,7 @@ mudanças com `claude plugin validate .`.
 | [`packages/mcp`](./packages/mcp) | [`@adaflow/mcp`](./packages/mcp/README.md) — servidor MCP (stdio) sobre o SDK, usado pelo plugin do Claude Code |
 | [`.claude-plugin/`](./.claude-plugin) + [`commands/`](./commands) | Manifesto do plugin `adaflow`, marketplace `adalink` e comandos `/adaflow:*` |
 | [`packages/cli`](./packages/cli) | [`@adaflow/cli`](./packages/cli/README.md) — binário `adaflow`; instala e atualiza as skills nos projetos (`adaflow skills add\|update\|list`) |
-| [`connect/`](./connect/README.md) | Adaflow Connect: spec OpenAPI pública e curada, e o guia da [Base44](./connect/base44/README.md) com a Backend Function pronta |
+| [`connect/`](./connect/README.md) | Adaflow Connect: spec OpenAPI pública, guia da [Base44](./connect/base44/README.md) com a Backend Function, [MCP remoto](./connect/mcp/README.md) e [blocos para o v0](./connect/v0/README.md) |
 | [`templates/nextjs`](./templates/nextjs) | Starter NextJS + Tailwind 4 + shadcn/ui + Prisma com SSO handoff e chat com IA prontos — via [`create-adaflow-app`](#templates) |
 
 ## Skills
@@ -59,6 +59,8 @@ integração no seu app, com passos, snippets e checklist de validação:
 | [`adaflow-generic-chat`](./skills/adaflow-generic-chat/SKILL.md) | Chamada genérica de LLM via API OpenAI-compatible |
 | [`adaflow-knowledge-repository`](./skills/adaflow-knowledge-repository/SKILL.md) | Criar repositórios de conhecimento e subir documentos (RAG no chat do Adaflow) |
 | [`adaflow-governance`](./skills/adaflow-governance/SKILL.md) | Trilha de auditoria: eventos de negócio + sessão no módulo Governança |
+| [`adaflow-base44`](./skills/adaflow-base44/SKILL.md) | App da Base44 via Backend Function `adaflow` e token de app (Adaflow Connect) |
+| [`adaflow-v0`](./skills/adaflow-v0/SKILL.md) | App Next.js do v0 com os blocos `adaflow-chat` e `adaflow-agent-runner` (Adaflow Connect) |
 
 ### Instalação das skills no seu projeto
 

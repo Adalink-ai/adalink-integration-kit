@@ -1,0 +1,105 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "adaflow",
+  "homepage": "https://github.com/Adalink-ai/adalink-integration-kit/tree/main/connect/v0",
+  "items": [
+    {
+      "name": "adaflow-chat",
+      "type": "registry:block",
+      "title": "Chat com especialista da Adaflow",
+      "description": "Chat com um especialista ou modelo da Adaflow, com resposta em streaming e histórico guardado na Adaflow. Exige a variável ADAFLOW_APP_TOKEN (token de app da Adaflow, só no servidor).",
+      "dependencies": [
+        "@adaflow/sdk",
+        "server-only"
+      ],
+      "registryDependencies": [
+        "button",
+        "card",
+        "input",
+        "scroll-area"
+      ],
+      "files": [
+        {
+          "path": "lib/adaflow-server.ts",
+          "type": "registry:lib",
+          "target": "lib/adaflow-server.ts"
+        },
+        {
+          "path": "app/api/adaflow/status/route.ts",
+          "type": "registry:file",
+          "target": "app/api/adaflow/status/route.ts"
+        },
+        {
+          "path": "components/adaflow-setup-notice.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/api/adaflow/chat/route.ts",
+          "type": "registry:file",
+          "target": "app/api/adaflow/chat/route.ts"
+        },
+        {
+          "path": "components/adaflow-chat.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/adaflow/chat/page.tsx",
+          "type": "registry:page",
+          "target": "app/adaflow/chat/page.tsx"
+        }
+      ],
+      "categories": [
+        "adaflow",
+        "chat"
+      ]
+    },
+    {
+      "name": "adaflow-agent-runner",
+      "type": "registry:block",
+      "title": "Executar agente autônomo da Adaflow",
+      "description": "Envia uma tarefa a um agente autônomo da Adaflow e mostra o resultado, mantendo o contexto entre execuções. Exige a variável ADAFLOW_APP_TOKEN (token de app da Adaflow, só no servidor).",
+      "dependencies": [
+        "@adaflow/sdk",
+        "server-only"
+      ],
+      "registryDependencies": [
+        "button",
+        "card"
+      ],
+      "files": [
+        {
+          "path": "lib/adaflow-server.ts",
+          "type": "registry:lib",
+          "target": "lib/adaflow-server.ts"
+        },
+        {
+          "path": "app/api/adaflow/status/route.ts",
+          "type": "registry:file",
+          "target": "app/api/adaflow/status/route.ts"
+        },
+        {
+          "path": "components/adaflow-setup-notice.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/api/adaflow/agents/[agentId]/run/route.ts",
+          "type": "registry:file",
+          "target": "app/api/adaflow/agents/[agentId]/run/route.ts"
+        },
+        {
+          "path": "components/adaflow-agent-runner.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/adaflow/agent/page.tsx",
+          "type": "registry:page",
+          "target": "app/adaflow/agent/page.tsx"
+        }
+      ],
+      "categories": [
+        "adaflow",
+        "agents"
+      ]
+    }
+  ]
+}
